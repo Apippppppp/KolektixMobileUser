@@ -3,12 +3,51 @@ import { ref, watch, onMounted, onUnmounted } from 'vue';
 import Checkin from './Checkin.vue';
 import Dashboard from './Dashboard.vue';
 import Event from './Event.vue';
+import CreateEvent from './CreateEvent.vue';
 import { Vue3Lottie } from 'vue3-lottie';
 
 const emit = defineEmits(['logout']);
 
 const searchQuery = ref('');
 const activeTab = ref('Dashboard');
+
+const checkinInitialTab = ref('aktif');
+const checkinInitialEvent = ref(null);
+
+const handleSwitchTab = (tab, initialTab = 'aktif', initialEvent = null) => {
+  activeTab.value = tab;
+  checkinInitialTab.value = initialTab;
+  checkinInitialEvent.value = initialEvent;
+};
+
+// Handles back/done from CreateEvent component
+const eventInitialFilter = ref('semua');
+const handleCreateEventBack = (intent, newEvent) => {
+  if (intent === 'draft') {
+    eventInitialFilter.value = 'draf';
+    // Add the draft event to the events array
+    if (newEvent) {
+      events.value.unshift({ ...newEvent, status: 'Draft' });
+    }
+  } else if (intent === 'publish') {
+    eventInitialFilter.value = 'semua';
+    // Add the new event to the events array
+    if (newEvent) {
+      events.value.unshift(newEvent);
+    }
+  } else {
+    eventInitialFilter.value = 'semua';
+  }
+  activeTab.value = 'event';
+};
+
+// Reset scroll position on tab switch to prevent content from starting scrolled down
+watch(activeTab, () => {
+  const scrollArea = document.querySelector('.content-scroll-area');
+  if (scrollArea) {
+    scrollArea.scrollTop = 0;
+  }
+});
 
 const sadAnimation = ref(null);
 onMounted(async () => {
@@ -110,7 +149,7 @@ const handleTarikSaldo = () => {
 <template>
   <div class="mobile-wrapper">
     <!-- Top Nav Bar -->
-    <header class="navbar-header">
+    <header class="navbar-header" :class="{ 'hidden-header': activeTab === 'create-event' }">
       <div class="nav-left-group">
         <button class="nav-menu-btn" @click="isSidebarOpen = true">
           <!-- Hamburger Menu -->
@@ -135,7 +174,7 @@ const handleTarikSaldo = () => {
     </header>
 
     <!-- Main Scrollable Content Area -->
-    <main class="content-scroll-area" :class="{ 'checkin-list-bg': activeTab === 'Checkin', 'dashboard-no-padding': activeTab === 'Dashboard' || activeTab === 'event' }">
+    <main class="content-scroll-area" :class="{ 'checkin-list-bg': activeTab === 'Checkin', 'dashboard-no-padding': activeTab === 'Dashboard' || activeTab === 'event' || activeTab === 'create-event' }">
       <!-- Dashboard tab content template -->
       <template v-if="activeTab === 'Dashboard'">
         <Dashboard :events="events" />
@@ -258,10 +297,13 @@ const handleTarikSaldo = () => {
       </template>
 
       <!-- Event Component -->
-      <Event v-else-if="activeTab === 'event'" :events="events" />
+      <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" />
+
+      <!-- Create Event Component -->
+      <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
 
       <!-- Checkin Component -->
-      <Checkin v-else-if="activeTab === 'Checkin'" :events="events" />
+      <Checkin v-else-if="activeTab === 'Checkin'" :events="events" :initial-tab="checkinInitialTab" :initial-event="checkinInitialEvent" />
 
       <!-- Merch Empty State -->
       <template v-else-if="activeTab === 'merch'">
@@ -275,7 +317,7 @@ const handleTarikSaldo = () => {
     </main>
 
     <!-- Bottom Tab Navigation Bar -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' }">
       <button class="nav-tab home-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'">
         <!-- Custom Logo Image -->
         <img 
@@ -286,7 +328,7 @@ const handleTarikSaldo = () => {
         <span class="tab-label home-label">Home</span>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'Checkin' }" @click="activeTab = 'Checkin'">
+      <button class="nav-tab" :class="{ active: activeTab === 'Checkin' }" @click="handleSwitchTab('Checkin', 'aktif', null)">
         <!-- Scanner Icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
           <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" stroke-linecap="round" stroke-linejoin="round" />
@@ -295,7 +337,7 @@ const handleTarikSaldo = () => {
         <span class="tab-label">Checkin</span>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'event' }" @click="activeTab = 'event'">
+      <button class="nav-tab" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null)">
         <!-- Calendar Icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
           <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -400,7 +442,7 @@ const handleTarikSaldo = () => {
 
             <!-- Submenu Items -->
             <div v-show="isEventGroupOpen" class="sidebar-sub-items">
-              <button class="sidebar-sub-item" :class="{ active: activeTab === 'event' }" @click="activeTab = 'event'; isSidebarOpen = false">
+              <button class="sidebar-sub-item" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null); isSidebarOpen = false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/>
@@ -410,7 +452,7 @@ const handleTarikSaldo = () => {
                 <span>Event Saya</span>
               </button>
               
-              <button class="sidebar-sub-item" :class="{ active: activeTab === 'Checkin' }" @click="activeTab = 'Checkin'; isSidebarOpen = false">
+              <button class="sidebar-sub-item" :class="{ active: activeTab === 'Checkin' && checkinInitialTab !== 'report' }" @click="handleSwitchTab('Checkin', 'aktif', null); isSidebarOpen = false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
                   <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" stroke-linecap="round" stroke-linejoin="round" />
                   <line x1="6" y1="12" x2="18" y2="12" stroke-linecap="round" stroke-linejoin="round" />
@@ -418,7 +460,7 @@ const handleTarikSaldo = () => {
                 <span>Check In Event</span>
               </button>
 
-              <button class="sidebar-sub-item" :class="{ active: activeTab === 'report' }" @click="activeTab = 'report'; isSidebarOpen = false">
+              <button class="sidebar-sub-item" :class="{ active: activeTab === 'Checkin' && checkinInitialTab === 'report' }" @click="handleSwitchTab('Checkin', 'report', null); isSidebarOpen = false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
@@ -508,6 +550,20 @@ const handleTarikSaldo = () => {
   justify-content: space-between;
   padding: 0 16px;
   flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.navbar-header.hidden-header {
+  transform: translateY(-100%);
+  opacity: 0;
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  border: none;
+  pointer-events: none;
 }
 
 .nav-menu-btn, .nav-profile-container {
@@ -963,6 +1019,19 @@ const handleTarikSaldo = () => {
   padding: 0 8px;
   z-index: 10;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08), 0 -2px 10px rgba(0, 0, 0, 0.04); /* stronger visible shadow */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.bottom-nav.hidden-nav {
+  transform: translateY(100%);
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  pointer-events: none;
 }
 
 .nav-tab {
