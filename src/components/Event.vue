@@ -21,7 +21,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['switch-tab']);
+const emit = defineEmits(['switch-tab', 'lihat-detail']);
 
 const currentFilter = ref(props.initialFilter); // 'semua' | 'aktif' | 'draf' | 'lalu'
 
@@ -44,7 +44,7 @@ const filteredEvents = computed(() => {
 });
 
 const handleLihatDetail = (event) => {
-  alert(`Detail Event: ${event.title}`);
+  emit('lihat-detail', event);
 };
 
 const handleEdit = (event) => {

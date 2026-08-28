@@ -4,12 +4,14 @@ import Checkin from './Checkin.vue';
 import Dashboard from './Dashboard.vue';
 import Event from './Event.vue';
 import CreateEvent from './CreateEvent.vue';
+import EventDetail from './EventDetail.vue';
 import { Vue3Lottie } from 'vue3-lottie';
 
 const emit = defineEmits(['logout']);
 
 const searchQuery = ref('');
 const activeTab = ref('Dashboard');
+const selectedEvent = ref(null);
 
 const checkinInitialTab = ref('aktif');
 const checkinInitialEvent = ref(null);
@@ -149,7 +151,7 @@ const handleTarikSaldo = () => {
 <template>
   <div class="mobile-wrapper">
     <!-- Top Nav Bar -->
-    <header class="navbar-header" :class="{ 'hidden-header': activeTab === 'create-event' }">
+    <header class="navbar-header" :class="{ 'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail' }">
       <div class="nav-left-group">
         <button class="nav-menu-btn" @click="isSidebarOpen = true">
           <!-- Hamburger Menu -->
@@ -174,7 +176,7 @@ const handleTarikSaldo = () => {
     </header>
 
     <!-- Main Scrollable Content Area -->
-    <main class="content-scroll-area" :class="{ 'checkin-list-bg': activeTab === 'Checkin', 'dashboard-no-padding': activeTab === 'Dashboard' || activeTab === 'event' || activeTab === 'create-event' }">
+    <main class="content-scroll-area" :class="{ 'checkin-list-bg': activeTab === 'Checkin', 'dashboard-no-padding': activeTab === 'Dashboard' || activeTab === 'event' || activeTab === 'create-event' || activeTab === 'event-detail' }">
       <!-- Dashboard tab content template -->
       <template v-if="activeTab === 'Dashboard'">
         <Dashboard :events="events" />
@@ -297,7 +299,10 @@ const handleTarikSaldo = () => {
       </template>
 
       <!-- Event Component -->
-      <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" />
+      <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" @lihat-detail="(e) => { selectedEvent = e; activeTab = 'event-detail'; }" />
+
+      <!-- Event Detail Component -->
+      <EventDetail v-else-if="activeTab === 'event-detail'" :event="selectedEvent" @back="activeTab = 'event'" />
 
       <!-- Create Event Component -->
       <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
@@ -317,7 +322,7 @@ const handleTarikSaldo = () => {
     </main>
 
     <!-- Bottom Tab Navigation Bar -->
-    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' }">
+    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' }">
       <button class="nav-tab home-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'">
         <!-- Custom Logo Image -->
         <img 
