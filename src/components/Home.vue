@@ -1,20 +1,78 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import Checkin from './Checkin.vue';
 import Dashboard from './Dashboard.vue';
 import Event from './Event.vue';
 import CreateEvent from './CreateEvent.vue';
 import EventDetail from './EventDetail.vue';
+import Profile from './Profile.vue';
+import Transaksi from './Transaksi.vue';
+import Explore from './Explore.vue';
 import { Vue3Lottie } from 'vue3-lottie';
 
 const emit = defineEmits(['logout']);
 
 const searchQuery = ref('');
-const activeTab = ref('Dashboard');
+const activeTab = ref('home');
 const selectedEvent = ref(null);
 
 const checkinInitialTab = ref('aktif');
 const checkinInitialEvent = ref(null);
+
+// Placeholder typing animation logic
+const placeholders = ['Cari event musik...', 'Cari tiket pameran...', 'Cari kreator favorit...', 'Cari The Script...'];
+const currentPlaceholder = ref('Cari event...');
+let textIndex = 0;
+let charIndex = 0;
+let isDeleting = false;
+
+const typePlaceholder = () => {
+  const currentText = placeholders[textIndex];
+  
+  if (isDeleting) {
+    currentPlaceholder.value = currentText.substring(0, charIndex - 1);
+    charIndex--;
+  } else {
+    currentPlaceholder.value = currentText.substring(0, charIndex + 1);
+    charIndex++;
+  }
+
+  let typeSpeed = isDeleting ? 30 : 80;
+
+  if (!isDeleting && charIndex === currentText.length) {
+    typeSpeed = 2500; // Pause at the end before deleting
+    isDeleting = true;
+  } else if (isDeleting && charIndex === 0) {
+    isDeleting = false;
+    textIndex = (textIndex + 1) % placeholders.length;
+    typeSpeed = 500; // Pause before typing the next phrase
+  }
+
+  setTimeout(typePlaceholder, typeSpeed);
+};
+
+onMounted(() => {
+  setTimeout(typePlaceholder, 1000);
+});
+
+const isScrolledDown = ref(false);
+const isScrolledFromTop = ref(false);
+let lastScrollTop = 0;
+
+const handleScroll = (e) => {
+  const st = e.target.scrollTop;
+  
+  isScrolledFromTop.value = st > 100;
+
+  if (st > lastScrollTop && st > 20) {
+    // scrolling down
+    isScrolledDown.value = true;
+  } else if (st < lastScrollTop) {
+    // scrolling up
+    isScrolledDown.value = false;
+  }
+  lastScrollTop = st <= 0 ? 0 : st;
+};
 
 const handleSwitchTab = (tab, initialTab = 'aktif', initialEvent = null) => {
   activeTab.value = tab;
@@ -51,11 +109,154 @@ watch(activeTab, () => {
   }
 });
 
+const currentSliderIndex = ref(0);
+let sliderInterval;
+
+const comingSoonIndex = ref(0);
+let comingSoonInterval;
+
+const startSliderInterval = () => {
+  if (sliderInterval) clearInterval(sliderInterval);
+  sliderInterval = setInterval(() => {
+    if (events.value.length > 0) {
+      currentSliderIndex.value = (currentSliderIndex.value + 1) % events.value.length;
+    }
+  }, 3500);
+};
+
+const startComingSoonInterval = () => {
+  if (comingSoonInterval) clearInterval(comingSoonInterval);
+  comingSoonInterval = setInterval(() => {
+    if (comingSoonEvents.value.length > 0) {
+      comingSoonIndex.value = (comingSoonIndex.value + 1) % comingSoonEvents.value.length;
+    }
+  }, 3000);
+};
+
+const mostPopularIndex = ref(0);
+const isTransitioning = ref(true);
+let mostPopularInterval;
+
+const mpLoopEvents = computed(() => {
+  if (!mostPopularEvents.value || mostPopularEvents.value.length === 0) return [];
+  return [...mostPopularEvents.value, mostPopularEvents.value[0]];
+});
+
+const nextMostPopular = () => {
+  isTransitioning.value = true;
+  mostPopularIndex.value++;
+};
+
+const handleMpTransitionEnd = () => {
+  if (mostPopularIndex.value >= mostPopularEvents.value.length) {
+    isTransitioning.value = false;
+    mostPopularIndex.value = 0;
+  }
+};
+
+// Drag / Swipe Logic for Event Paling Laku
+const mpStartX = ref(0);
+const mpCurrentTranslate = ref(0);
+const mpIsDragging = ref(false);
+
+const handleMpDragStart = (e) => {
+  mpIsDragging.value = true;
+  mpStartX.value = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+  if (mostPopularInterval) clearInterval(mostPopularInterval);
+};
+
+const handleMpDragMove = (e) => {
+  if (!mpIsDragging.value) return;
+  const currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+  mpCurrentTranslate.value = currentX - mpStartX.value;
+};
+
+const handleMpDragEnd = () => {
+  if (!mpIsDragging.value) return;
+  mpIsDragging.value = false;
+  
+  if (mpCurrentTranslate.value < -40) {
+    nextMostPopular();
+  } else if (mpCurrentTranslate.value > 40) {
+    if (mostPopularIndex.value > 0) {
+      isTransitioning.value = true;
+      mostPopularIndex.value--;
+    } else {
+      isTransitioning.value = false;
+      mostPopularIndex.value = mostPopularEvents.value.length - 1;
+    }
+  }
+  
+  mpCurrentTranslate.value = 0;
+  startMostPopularInterval();
+};
+
+const startMostPopularInterval = () => {
+  if (mostPopularInterval) clearInterval(mostPopularInterval);
+  mostPopularInterval = setInterval(() => {
+    nextMostPopular();
+  }, 3000);
+};
+
 const sadAnimation = ref(null);
 onMounted(async () => {
   const res = await fetch('/media/sad emotion.json');
   sadAnimation.value = await res.json();
+  startSliderInterval();
+  startComingSoonInterval();
+  startMostPopularInterval();
 });
+
+onUnmounted(() => {
+  if (sliderInterval) clearInterval(sliderInterval);
+  if (comingSoonInterval) clearInterval(comingSoonInterval);
+  if (mostPopularInterval) clearInterval(mostPopularInterval);
+});
+
+// Drag / Swipe Logic for Slider
+const startX = ref(0);
+const currentTranslate = ref(0);
+const prevTranslate = ref(0);
+const isDragging = ref(false);
+
+const handleDragStart = (x) => {
+  isDragging.value = true;
+  startX.value = x;
+  if (sliderInterval) clearInterval(sliderInterval);
+};
+
+const handleDragMove = (x) => {
+  if (!isDragging.value) return;
+  const currentPosition = x;
+  const diff = currentPosition - startX.value;
+  currentTranslate.value = prevTranslate.value + diff;
+};
+
+const handleDragEnd = () => {
+  if (!isDragging.value) return;
+  isDragging.value = false;
+  const movedBy = currentTranslate.value - prevTranslate.value;
+
+  if (movedBy < -50 && currentSliderIndex.value < events.value.length - 1) {
+    currentSliderIndex.value += 1;
+  } else if (movedBy > 50 && currentSliderIndex.value > 0) {
+    currentSliderIndex.value -= 1;
+  }
+
+  // Snap back
+  currentTranslate.value = 0;
+  prevTranslate.value = 0;
+  
+  startSliderInterval();
+};
+
+const handleTouchStart = (e) => handleDragStart(e.touches[0].clientX);
+const handleTouchMove = (e) => handleDragMove(e.touches[0].clientX);
+const handleTouchEnd = () => handleDragEnd();
+
+const handleMouseDown = (e) => handleDragStart(e.clientX);
+const handleMouseMove = (e) => handleDragMove(e.clientX);
+const handleMouseUp = () => handleDragEnd();
 
 const isSidebarOpen = ref(false);
 const isSaldoOpen = ref(true);
@@ -143,6 +344,201 @@ const events = ref([
   }
 ]);
 
+const comingSoonEvents = ref([
+  {
+    id: 101,
+    title: '2024 Junny Tour: (Blanc) in Jakarta',
+    price: 'Rp99.000',
+    organizer: 'JUNNY Official',
+    creatorLogo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80',
+    location: 'FYNE, DKI Jakarta',
+    date: '12 Juni 2024',
+    status: 'Segera Hadir',
+    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 102,
+    title: 'Soundrenaline 2024 - Special Lineup',
+    price: 'Rp250.000',
+    organizer: 'Ravel Entertainment',
+    creatorLogo: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80',
+    location: 'Ancol, Jakarta',
+    date: 'Sat, 12 Oct 2024',
+    status: 'Segera Hadir',
+    image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 103,
+    title: 'Pesta Pora 2024 Fest',
+    price: 'Rp175.000',
+    organizer: 'Boss Creator',
+    creatorLogo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80',
+    location: 'Gambir Expo, Jakarta',
+    date: 'Fri, 25 Oct 2024',
+    status: 'Segera Hadir',
+    image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 104,
+    title: 'The Script - Satellites World Tour',
+    price: 'Rp650.000',
+    organizer: 'Color Asia Live',
+    creatorLogo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80',
+    location: 'ICE BSD, Tangerang',
+    date: 'Sun, 14 Feb 2025',
+    status: 'Segera Hadir',
+    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80'
+  }
+]);
+
+const selectedCategory = ref(null);
+const quickCategories = ref([
+  {
+    name: 'Musik',
+    color: '#ec4899',
+    bgColor: '#fce7f3',
+    svg: '<path d="M9 18V5l12-2v13M9 9l12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+  },
+  {
+    name: 'Olahraga',
+    color: '#f59e0b',
+    bgColor: '#fef3c7',
+    svg: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H7M14 14.66V17c0 .55.45 1 1 1h2"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>'
+  },
+  {
+    name: 'Seminar',
+    color: '#3b82f6',
+    bgColor: '#dbeafe',
+    svg: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>'
+  },
+  {
+    name: 'Religi',
+    color: '#10b981',
+    bgColor: '#d1fae5',
+    svg: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'
+  },
+  {
+    name: 'Talkshow',
+    color: '#8b5cf6',
+    bgColor: '#ede9fe',
+    svg: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/>'
+  },
+  {
+    name: 'Fashion',
+    color: '#f43f5e',
+    bgColor: '#ffe4e6',
+    svg: '<path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>'
+  },
+  {
+    name: 'Wisata',
+    color: '#06b6d4',
+    bgColor: '#cffafe',
+    svg: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>'
+  }
+]);
+
+const popularEvents = ref([
+  {
+    id: 201,
+    title: 'Ngepop Bareng Nadin Amizah',
+    price: 'Rp150.000',
+    organizer: 'Nadin Amizah Music',
+    creatorLogo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80',
+    location: 'Senayan, Jakarta',
+    date: 'Sun, 15 Sep 2024',
+    status: 'Live',
+    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 202,
+    title: 'Java Jazz Festival 2024',
+    price: 'Rp450.000',
+    organizer: 'Java Festival Production',
+    creatorLogo: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80',
+    location: 'JIExpo Kemayoran',
+    date: 'Fri, 20 Sep 2024',
+    status: 'Live',
+    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 203,
+    title: 'Festivibes All Gen 2024',
+    price: 'Rp75.000',
+    organizer: 'KVIBES.ID',
+    creatorLogo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80',
+    location: 'Mall Taman Anggrek',
+    date: 'Sat, 28 Sep 2024',
+    status: 'Live',
+    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80'
+  }
+]);
+
+const creators = ref([
+  {
+    id: 1,
+    name: 'Ravel Entertainment',
+    followers: '128.5K',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+    isFollowing: false
+  },
+  {
+    id: 2,
+    name: 'Boss Creator',
+    followers: '89.2K',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+    isFollowing: false
+  },
+  {
+    id: 3,
+    name: 'Newhope.inc',
+    followers: '45.8K',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+    isFollowing: false
+  },
+  {
+    id: 4,
+    name: 'Creative Hub ID',
+    followers: '32.1K',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80',
+    isFollowing: false
+  }
+]);
+
+const toggleFollow = (creator) => {
+  creator.isFollowing = !creator.isFollowing;
+};
+
+const mostPopularEvents = ref([
+  {
+    id: 301,
+    title: 'Coldplay Music Of The Spheres Tour',
+    badge: '#1 LAKU KERAS',
+    price: 'Rp1.200.000',
+    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80'
+  },
+  {
+    id: 302,
+    title: 'Ed Sheeran +-=÷x Tour 2024',
+    badge: '#2 BESTSELLER',
+    price: 'Rp850.000',
+    image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80'
+  },
+  {
+    id: 303,
+    title: 'Bruno Mars Live in Jakarta',
+    badge: '#3 TERLARIS',
+    price: 'Rp950.000',
+    image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80'
+  },
+  {
+    id: 304,
+    title: 'Prambanan Jazz Festival 10th',
+    badge: '#4 TOP TICKET',
+    price: 'Rp350.000',
+    image: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=600&q=80'
+  }
+]);
+
 const handleTarikSaldo = () => {
   alert('Penarikan saldo sedang diproses');
 };
@@ -151,86 +547,168 @@ const handleTarikSaldo = () => {
 <template>
   <div class="mobile-wrapper">
     <!-- Top Nav Bar -->
-    <header class="navbar-header" :class="{ 'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail' }">
-      <div class="nav-left-group">
-        <button class="nav-menu-btn" @click="isSidebarOpen = true">
-          <!-- Hamburger Menu -->
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="nav-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
-        
-        <div class="navbar-logo-container">
-          <img src="/media/logo.png" alt="Kolektix Logo" class="nav-logo" />
-        </div>
-      </div>
-
-      <div class="nav-profile-container">
-        <div class="profile-circle">
-          <!-- Profile Icon SVG -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="profile-svg">
-            <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
-          </svg>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Scrollable Content Area -->
-    <main class="content-scroll-area" :class="{ 'checkin-list-bg': activeTab === 'Checkin', 'dashboard-no-padding': activeTab === 'Dashboard' || activeTab === 'event' || activeTab === 'create-event' || activeTab === 'event-detail' }">
-      <!-- Dashboard tab content template -->
-      <template v-if="activeTab === 'Dashboard'">
-        <Dashboard :events="events" />
-      </template>
-
-      <!-- Home tab content template -->
+    <!-- Top Nav Bar -->
+    <header class="navbar-header" :class="{ 
+      'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail',
+      'navbar-home': activeTab === 'home',
+      'navbar-scrolled': isScrolledFromTop 
+    }">
       <template v-if="activeTab === 'home'">
-        <!-- Blue Header Wrapper -->
-        <div class="header-blue-bg">
-          <!-- Sales & Payout Summary Card -->
-          <section class="summary-card">
-            <span class="summary-title">Total Penjualan</span>
-            <h2 class="summary-amount">Rp 48.500.000</h2>
-            
-            <div class="summary-badges">
-              <div class="summary-badge">
-                <span class="badge-dot green-dot"></span>
-                <span class="badge-text">3 Event Aktif</span>
-              </div>
-              <div class="summary-badge">
-                <!-- Ticket Icon SVG -->
-                <svg viewBox="0 0 24 24" fill="currentColor" class="badge-icon-ticket">
-                  <path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4a2 2 0 0 1 0 4v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 1 0-4zm-9 7.5h-2v-2h2v2zm0-4.5h-2v-2h2v2zm0-4.5h-2v-2h2v2z"/>
+        <div class="home-nav-container">
+          <!-- Top Row: Account Greeting & Simple Action Icons -->
+          <div class="home-nav-top">
+            <div class="account-group" @click="isSidebarOpen = true">
+              <button class="nav-menu-lines-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="menu-lines-icon">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
-                <span class="badge-text">1.420 Tiket Terjual</span>
+              </button>
+              <div class="account-text-info">
+                <span class="account-name">Hi, Afif Maulana Yusuf</span>
+                
               </div>
             </div>
-            
-            <div class="summary-divider"></div>
-            
-            <div class="payout-row">
-              <div class="payout-info">
-                <span class="payout-label">Saldo Payout</span>
-                <span class="payout-amount">Rp 12.400.000</span>
-              </div>
-              <button class="payout-btn" @click="handleTarikSaldo">
-                <span>Tarik Saldo</span>
-                <!-- Arrow Right Icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="arrow-icon">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
+
+            <div class="nav-right-actions">
+              <button class="nav-icon-btn notification-btn" title="Notifikasi" @click="isSidebarOpen = true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header-action-icon">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span class="notification-badge-dot"></span>
+              </button>
+
+              <button class="nav-icon-btn cart-btn" title="Keranjang" @click="isSidebarOpen = true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header-action-icon">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
                 </svg>
               </button>
             </div>
-          </section>
+          </div>
+
+          <!-- Bottom Row: Search Bar -->
+          <div class="home-search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="search-bar-icon">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" v-model="searchQuery" :placeholder="currentPlaceholder" class="search-bar-input" />
+            
+          </div>
+        </div>
+      </template>
+
+      <!-- Standard navbar for other tabs -->
+      <template v-else>
+        <div class="nav-left-group">
+          <button class="nav-menu-btn" @click="isSidebarOpen = true">
+            <!-- Hamburger Menu -->
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="nav-icon">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+          
+          <div class="header-search-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.5" class="search-icon">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" :placeholder="currentPlaceholder" class="search-input" />
+          </div>
         </div>
 
-        <!-- White Container for Event Cards with custom rounded transition -->
-        <div class="events-container">
-          <!-- Event Cards List -->
+        <div class="nav-profile-container">
+          <div class="profile-circle" @click="activeTab = 'profile'">
+            <!-- Profile Icon SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="profile-svg">
+              <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+      </template>
+    </header>
+
+    <!-- Main Scrollable Content Area -->
+    <main class="content-scroll-area" @scroll="handleScroll" :class="{ 'checkin-list-bg': activeTab === 'explore', 'dashboard-no-padding': activeTab === 'profile' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'create-event' || activeTab === 'event-detail' }">
+      <!-- Profile tab content template -->
+      <template v-if="activeTab === 'profile'">
+        <Profile @logout="emit('logout')" @navigate-transaksi="activeTab = 'transaksi'" />
+      </template>
+
+      <!-- Transaksi tab content template -->
+      <template v-else-if="activeTab === 'transaksi'">
+        <Transaksi />
+      </template>
+
+      <!-- Explore tab content template -->
+      <template v-else-if="activeTab === 'explore'">
+        <Explore :events="events" @select-event="(e) => { selectedEvent = e; activeTab = 'event-detail'; }" />
+      </template>
+
+      <!-- Home tab content template -->
+      <template v-else-if="activeTab === 'home'">
+        <div class="home-redesign-body">
+          
+          <!-- Image Slider (Shorter height) -->
+          <div class="slider-container">
+            <div 
+              class="slider-track" 
+              :style="{ 
+                transform: `translateX(calc(-${currentSliderIndex * 100}% + ${currentTranslate}px))`,
+                transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)' 
+              }"
+              @touchstart="handleTouchStart"
+              @touchmove="handleTouchMove"
+              @touchend="handleTouchEnd"
+              @mousedown="handleMouseDown"
+              @mousemove="handleMouseMove"
+              @mouseup="handleMouseUp"
+              @mouseleave="handleMouseUp"
+            >
+              <div v-for="event in events" :key="event.id" class="slide">
+                <img :src="event.image" :alt="event.title" class="slide-image" draggable="false" />
+              </div>
+            </div>
+            <div class="slider-dots">
+              <span 
+                v-for="(event, index) in events" 
+                :key="event.id" 
+                class="slider-dot" 
+                :class="{ active: currentSliderIndex === index }"
+                @click="currentSliderIndex = index"
+              ></span>
+            </div>
+          </div>
+
+          <!-- Horizontal Category Buttons Section -->
+          <div class="category-quick-scroll">
+            <button 
+              v-for="cat in quickCategories" 
+              :key="cat.name" 
+              class="category-chip-btn"
+              :class="{ active: selectedCategory === cat.name }"
+              @click="selectedCategory = selectedCategory === cat.name ? null : cat.name"
+            >
+              <div class="cat-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cat-svg-icon" v-html="cat.svg"></svg>
+              </div>
+              <span class="cat-chip-label">{{ cat.name }}</span>
+            </button>
+          </div>
+
+          <!-- Restored Event Cards List -->
+          <div class="top-events-header">
+            <h2 class="top-events-title">Events Terbaru</h2>
+          </div>
+
           <section class="cards-list-section">
             <div 
               v-for="event in events" 
               :key="event.id" 
               class="event-card"
+              @click="selectedEvent = event; activeTab = 'event-detail'"
             >
               <!-- Card Thumbnail Area -->
               <div class="card-thumbnail-wrapper">
@@ -250,7 +728,6 @@ const handleTarikSaldo = () => {
                   <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                   <span class="creator-name">{{ event.organizer }}</span>
                   <span class="verified-badge">
-                    <!-- Verified Checkmark Icon -->
                     <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                     </svg>
@@ -271,30 +748,226 @@ const handleTarikSaldo = () => {
                   <span class="meta-text">{{ event.date }}</span>
                 </div>
 
-                <!-- Price moved below date -->
                 <div class="price-row">
                   <span class="event-card-price">{{ event.price }}</span>
-                </div>
-
-                <!-- Footer Progress bar without Kelola Button -->
-                <div class="card-footer-row">
-                  <div class="ticket-sales-info">
-                    <div class="sales-text-row">
-                      <span class="sales-text">{{ event.sold }}/{{ event.total }} Tiket Terjual</span>
-                      <span class="sales-percent">{{ Math.round((event.sold / event.total) * 100) }}%</span>
-                    </div>
-                    <div class="sales-progress-bar">
-                      <div 
-                        class="sales-progress-fill" 
-                        :style="{ width: `${(event.sold / event.total) * 100}%` }"
-                        :class="{ 'sold-out-fill': event.isSoldOut }"
-                      ></div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
           </section>
+
+          <!-- Segera Hadir Section -->
+          <div class="top-events-header coming-soon-header">
+            <h2 class="top-events-title">Segera Hadir</h2>
+          </div>
+
+          <div class="coming-soon-wrapper">
+            <!-- Left Fixed Promo Banner Image -->
+            <div class="promo-banner-box">
+              <img src="/media/promodesign.png" alt="Promo KeBut" class="promo-banner-img" />
+            </div>
+
+            <!-- Right Auto-Scrolling Event Cards Carousel -->
+            <div class="coming-soon-carousel-area">
+              <div 
+                class="coming-soon-track" 
+                :style="{ transform: `translateX(-${comingSoonIndex * 100}%)`, transition: 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)' }"
+              >
+                <div 
+                  v-for="event in comingSoonEvents" 
+                  :key="event.id" 
+                  class="coming-soon-slide"
+                >
+                  <div 
+                    class="event-card coming-soon-card"
+                    @click="selectedEvent = event; activeTab = 'event-detail'"
+                  >
+                    <!-- Card Thumbnail Area -->
+                    <div class="card-thumbnail-wrapper">
+                      <img :src="event.image" :alt="event.title" class="event-thumbnail" />
+                      <div class="status-badge upcoming">
+                        <span class="status-dot"></span>
+                        <span>Segera Hadir</span>
+                      </div>
+                    </div>
+
+                    <!-- Card Info Area -->
+                    <div class="card-info">
+                      <h3 class="event-card-title">{{ event.title }}</h3>
+                      
+                      <!-- Creator Profile & Verified Badge Row -->
+                      <div class="creator-profile-row">
+                        <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                        <span class="creator-name">{{ event.organizer }}</span>
+                        <span class="verified-badge">
+                          <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                          </svg>
+                        </span>
+                      </div>
+                      
+                      <div class="meta-row" v-if="event.location">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                          <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="meta-text">{{ event.location }}</span>
+                      </div>
+
+                      <div class="meta-row" v-if="event.date">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                          <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="meta-text">{{ event.date }}</span>
+                      </div>
+
+                      <div class="price-row">
+                        <span class="event-card-price">{{ event.price }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pagination Dots Indicator under the scrolling area -->
+              <div class="coming-soon-dots">
+                <span 
+                  v-for="(event, index) in comingSoonEvents" 
+                  :key="event.id" 
+                  class="cs-dot" 
+                  :class="{ active: comingSoonIndex === index }"
+                  @click="comingSoonIndex = index"
+                ></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Events Section: Event Populer -->
+          <div class="top-events-header extra-section-header">
+            <h2 class="top-events-title">Event Populer</h2>
+          </div>
+
+          <section class="cards-list-section">
+            <div 
+              v-for="event in popularEvents" 
+              :key="event.id" 
+              class="event-card"
+              @click="selectedEvent = event; activeTab = 'event-detail'"
+            >
+              <!-- Card Thumbnail Area -->
+              <div class="card-thumbnail-wrapper">
+                <img :src="event.image" :alt="event.title" class="event-thumbnail" />
+                <div class="status-badge" :class="event.status.toLowerCase()">
+                  <span class="status-dot"></span>
+                  <span>{{ event.status }}</span>
+                </div>
+              </div>
+
+              <!-- Card Info Area -->
+              <div class="card-info">
+                <h3 class="event-card-title">{{ event.title }}</h3>
+                
+                <div class="creator-profile-row">
+                  <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                  <span class="creator-name">{{ event.organizer }}</span>
+                  <span class="verified-badge">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                  </span>
+                </div>
+                
+                <div class="meta-row" v-if="event.location">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                    <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="meta-text">{{ event.location }}</span>
+                </div>
+
+                <div class="meta-row" v-if="event.date">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                    <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="meta-text">{{ event.date }}</span>
+                </div>
+
+                <div class="price-row">
+                  <span class="event-card-price">{{ event.price }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Section Event Paling Laku (Infinite Loop 1 Card at a Time) -->
+          <div class="top-events-header extra-section-header">
+            <h2 class="top-events-title">Event Paling Laku</h2>
+          </div>
+
+          <div 
+            class="most-popular-wrapper"
+            @touchstart="handleMpDragStart"
+            @touchmove="handleMpDragMove"
+            @touchend="handleMpDragEnd"
+            @mousedown="handleMpDragStart"
+            @mousemove="handleMpDragMove"
+            @mouseup="handleMpDragEnd"
+            @mouseleave="handleMpDragEnd"
+          >
+            <div class="most-popular-carousel-single">
+              <div 
+                class="most-popular-track-single"
+                :style="{ transform: `translateX(-${mostPopularIndex * 100}%)`, transition: isTransitioning ? 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)' : 'none' }"
+                @transitionend="handleMpTransitionEnd"
+              >
+                <div 
+                  v-for="(event, idx) in mpLoopEvents" 
+                  :key="idx" 
+                  class="most-popular-slide-single"
+                  @click="selectedEvent = event; activeTab = 'event-detail'"
+                >
+                  <div class="most-popular-card-single">
+                    <img :src="event.image" :alt="event.title" class="mp-single-img" />
+                    <div class="mp-single-badge">{{ event.badge }}</div>
+                    <div class="mp-single-overlay">
+                      <div class="mp-single-info">
+                        <h4 class="mp-single-title">{{ event.title }}</h4>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dots for Most Popular -->
+              <div class="most-popular-dots">
+                <span 
+                  v-for="(event, idx) in mostPopularEvents" 
+                  :key="event.id"
+                  class="mp-dot"
+                  :class="{ active: (mostPopularIndex % mostPopularEvents.length) === idx }"
+                  @click="mostPopularIndex = idx"
+                ></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Para Kreator -->
+          <div class="top-events-header extra-section-header">
+            <h2 class="top-events-title">Para Kreator</h2>
+          </div>
+
+          <div class="creators-scroll-list">
+            <div v-for="creator in creators" :key="creator.id" class="creator-card">
+              <img :src="creator.avatar" :alt="creator.name" class="creator-card-img" />
+              <h4 class="creator-card-name">{{ creator.name }}</h4>
+              <span class="creator-card-followers">{{ creator.followers }} Pengikut</span>
+              <button 
+                class="creator-follow-btn" 
+                :class="{ following: creator.isFollowing }"
+                @click="toggleFollow(creator)"
+              >
+                {{ creator.isFollowing ? 'Mengikuti' : 'Ikuti' }}
+              </button>
+            </div>
+          </div>
+
         </div>
       </template>
 
@@ -306,25 +979,11 @@ const handleTarikSaldo = () => {
 
       <!-- Create Event Component -->
       <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
-
-      <!-- Checkin Component -->
-      <Checkin v-else-if="activeTab === 'Checkin'" :events="events" :initial-tab="checkinInitialTab" :initial-event="checkinInitialEvent" />
-
-      <!-- Merch Empty State -->
-      <template v-else-if="activeTab === 'merch'">
-        <div class="merch-empty-state">
-          <div class="merch-blue-line"></div>
-          <Vue3Lottie v-if="sadAnimation" :animationData="sadAnimation" :height="180" :width="180" />
-          <h3 class="merch-empty-title">Belum Ada Merchandise</h3>
-          <p class="merch-empty-desc">Fitur merchandise sedang dalam pengembangan</p>
-        </div>
-      </template>
     </main>
 
     <!-- Bottom Tab Navigation Bar -->
-    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' }">
+    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail', 'nav-scrolled': isScrolledDown }">
       <button class="nav-tab home-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'">
-        <!-- Custom Logo Image -->
         <img 
           :src="activeTab === 'home' ? '/media/home (2).png' : '/media/home (1).png'" 
           alt="Home Icon" 
@@ -333,13 +992,13 @@ const handleTarikSaldo = () => {
         <span class="tab-label home-label">Home</span>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'Checkin' }" @click="handleSwitchTab('Checkin', 'aktif', null)">
-        <!-- Scanner Icon -->
+      <button class="nav-tab" :class="{ active: activeTab === 'explore' }" @click="activeTab = 'explore'">
+        <!-- Compass / Explore Icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" stroke-linecap="round" stroke-linejoin="round" />
-          <line x1="6" y1="12" x2="18" y2="12" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
         </svg>
-        <span class="tab-label">Checkin</span>
+        <span class="tab-label">Explore</span>
       </button>
 
       <button class="nav-tab" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null)">
@@ -351,23 +1010,23 @@ const handleTarikSaldo = () => {
         <span class="tab-label">Event</span>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'merch' }" @click="activeTab = 'merch'">
-        <!-- T-Shirt Icon -->
+      <button class="nav-tab" :class="{ active: activeTab === 'transaksi' }" @click="activeTab = 'transaksi'">
+        <!-- Receipt / Transaksi Icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <path d="M9 3H4v3c0 2 1 3 3 3h1v11a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V9h1c2 0 3-1 3-3V3h-5c-.5 1-1.5 2-3 2s-2.5-1-3-2Z" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
+          <line x1="8" y1="8" x2="16" y2="8"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
         </svg>
-        <span class="tab-label">Merch</span>
+        <span class="tab-label">Transaksi</span>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'Dashboard' }" @click="activeTab = 'Dashboard'">
-        <!-- Dashboard Grid Icon -->
+      <button class="nav-tab" :class="{ active: activeTab === 'profile' }" @click="activeTab = 'profile'">
+        <!-- User Profile Icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
         </svg>
-        <span class="tab-label">Dashboard</span>
+        <span class="tab-label">Profile</span>
       </button>
     </nav>
 
@@ -546,7 +1205,6 @@ const handleTarikSaldo = () => {
   }
 }
 
-/* Navbar styles */
 .navbar-header {
   background-color: var(--primary-base);
   height: 56px;
@@ -555,9 +1213,25 @@ const handleTarikSaldo = () => {
   justify-content: space-between;
   padding: 0 16px;
   flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
   transform: translateY(0);
   opacity: 1;
+}
+
+/* Home specific navbar styles for smooth transition */
+.navbar-header.navbar-home {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 50;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.navbar-header.navbar-home.navbar-scrolled {
+  background-color: var(--primary-base);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-header.hidden-header {
@@ -569,6 +1243,12 @@ const handleTarikSaldo = () => {
   overflow: hidden;
   border: none;
   pointer-events: none;
+}
+
+.nav-left-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .nav-menu-btn, .nav-profile-container {
@@ -587,10 +1267,44 @@ const handleTarikSaldo = () => {
   height: 24px;
 }
 
-.navbar-logo-container {
+.header-search-pill {
   display: flex;
   align-items: center;
-  justify-content: center;
+  background-color: var(--white);
+  border-radius: 20px;
+  padding: 0 12px;
+  flex: 1;
+  margin-right: 12px;
+  height: 32px;
+}
+
+.search-icon {
+  width: 13px;
+  height: 13px;
+  margin-right: 8px;
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 11px;
+  color: var(--dark);
+  flex: 1;
+  width: 100%;
+}
+
+
+.sign-in-btn {
+  background-color: var(--white);
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .nav-logo {
@@ -619,10 +1333,9 @@ const handleTarikSaldo = () => {
 .content-scroll-area {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 24px 16px 84px 16px; /* extra bottom padding */
+  padding: 0 0 84px 0; /* Remove top/side padding to allow full-width banner */
   display: flex;
   flex-direction: column;
-  gap: 24px;
   scrollbar-width: none;
 }
 
@@ -630,163 +1343,548 @@ const handleTarikSaldo = () => {
   display: none;
 }
 
-.content-scroll-area.dashboard-no-padding {
-  padding: 0;
-}
-
-/* Blue Header Container */
-.header-blue-bg {
-  background-color: var(--primary-base);
-  padding: 20px 16px 0 16px; /* shortened bottom edge to 0, adjusted top */
-  margin: -24px -16px 0 -16px;
-  position: relative;
-  z-index: 3; /* higher z-index so it stays on top of events-container, showing summary-card shadow */
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
-}
-
-/* Summary Card styles */
-.summary-card {
-  background-color: var(--white);
-  border: 1px solid var(--light-grey);
-  border-radius: 12px; /* standardized rounded corners */
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 16px -6px rgba(0, 0, 0, 0.04); /* neat thin shadow matching border */
-  margin-top: 12px;
-  margin-bottom: -32px; /* overlap blue area */
-  position: relative;
-  z-index: 3;
-}
-
-.summary-title {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--dark-grey);
-  text-transform: none; /* Not all uppercase */
-}
-
-.summary-amount {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--dark);
-  margin-top: 4px;
-  margin-bottom: 14px;
-  font-family: var(--font-sans);
-}
-
-.summary-badges {
-  display: flex;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  gap: 8px;
-  margin-bottom: 16px;
-  scrollbar-width: none; /* Hide scrollbar Firefox */
-  -ms-overflow-style: none; /* Hide scrollbar IE/Edge */
-}
-
-.summary-badges::-webkit-scrollbar {
-  display: none; /* Hide scrollbar Chrome/Safari */
-}
-
-.summary-badge {
-  background: none; /* Remove background */
-  border: 1px solid var(--light-grey); /* Keep thin border */
-  padding: 5px 12px;
-  border-radius: 12px; /* standardized rounded corners */
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0; /* Prevent badges from squishing */
-}
-
-.summary-badge .badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.summary-badge .green-dot {
-  background-color: #16a34a;
-}
-
-.badge-icon-ticket {
-  width: 14px;
-  height: 14px;
-  color: var(--primary-base);
-}
-
-.badge-text {
-  font-size: 11px;
-  font-weight: 400; /* Not bold */
-  color: var(--dark); /* Black color text */
-  text-transform: none; /* Not all uppercase */
-}
-
-.summary-divider {
-  height: 1px;
-  background-color: var(--light-grey);
-  margin-bottom: 14px;
-}
-
-.payout-row {
+/* K-Wallet Header Styles (Now inside events container) */
+.k-wallet-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: #194e9e;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(25, 78, 158, 0.1);
+  margin-bottom: 24px;
 }
 
-.payout-info {
+.k-wallet-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.k-creator-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.k-wallet-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.k-wallet-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+}
+
+.k-wallet-amount {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--white);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.k-wallet-coin {
+  font-size: 9px;
+  color: #8bb4e7;
+  font-weight: 500;
+}
+
+.k-wallet-actions {
+  display: flex;
+  align-items: center;
+}
+
+.tarik-saldo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--white);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tarik-saldo-btn:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.tarik-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Image Slider Styles */
+.slider-container {
+  position: relative;
+  width: 100%;
+  height: 120px !important;
+  min-height: 120px !important;
+  max-height: 120px !important;
+  border-radius: 8px;
+  overflow: hidden;
+  display: block;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== Horizontal Category Buttons Section ===== */
+.category-quick-scroll {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 4px 0 6px 0;
+  margin-top: 4px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.category-quick-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.category-chip-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 0;
+  transition: transform 0.2s ease;
+}
+
+.category-chip-btn:hover {
+  transform: translateY(-2px);
+}
+
+.cat-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #194e9e;
+  transition: all 0.2s ease;
+}
+
+.cat-svg-icon {
+  width: 20px;
+  height: 20px;
+  color: #194e9e;
+  transition: color 0.2s ease;
+}
+
+.category-chip-btn.active .cat-icon-box {
+  background-color: #194e9e;
+  border-color: #194e9e;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(25, 78, 158, 0.25);
+}
+
+.category-chip-btn.active .cat-svg-icon {
+  color: #ffffff;
+}
+
+.cat-chip-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.category-chip-btn.active .cat-chip-label {
+  font-weight: 700;
+  color: #194e9e;
+}
+
+/* White Container Overlapping Slider */
+.events-container {
+  background-color: var(--white);
+  border-radius: 16px 16px 0 0;
+  margin-top: -64px; /* overlap the slider more aggressively */
+  padding: 24px 16px;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.top-events-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+  margin-bottom: 0px;
+}
+
+.top-events-header.coming-soon-header {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+.top-events-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dark);
+  margin: 0;
+}
+
+/* ===== Segera Hadir Special Section (Full Width Side to Side & Compact Sizing) ===== */
+.coming-soon-wrapper {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  background-color: rgba(219, 234, 254, 0.35); /* Soft blue container with lower opacity */
+  padding: 8px 16px;
+  margin-left: -16px;
+  margin-right: -16px;
+  margin-top: 2px;
+  margin-bottom: 0px;
+  width: calc(100% + 32px);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 10px rgba(25, 78, 158, 0.03);
+}
+
+.promo-banner-box {
+  flex: 0 0 115px;
+  width: 115px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: transparent;
+  display: flex;
+}
+
+.promo-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.coming-soon-carousel-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  position: relative;
+}
+
+.coming-soon-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.coming-soon-slide {
+  flex: 0 0 100%;
+  width: 100%;
+}
+
+.coming-soon-card {
+  width: 100% !important;
+  margin: 0;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.coming-soon-card .card-thumbnail-wrapper {
+  height: 85px !important;
+}
+
+.coming-soon-card .card-info {
+  padding: 8px 10px !important;
+  gap: 4px !important;
+}
+
+.coming-soon-card .event-card-title {
+  font-size: 11.5px !important;
+  margin-bottom: 2px !important;
+}
+
+.coming-soon-card .creator-avatar {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.coming-soon-card .creator-name {
+  font-size: 9.5px !important;
+}
+
+.coming-soon-card .meta-text {
+  font-size: 9px !important;
+}
+
+.coming-soon-card .meta-icon {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.coming-soon-card .event-card-price {
+  font-size: 12px !important;
+}
+
+.coming-soon-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.cs-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: rgba(25, 78, 158, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cs-dot.active {
+  width: 14px;
+  border-radius: 4px;
+  background-color: #194e9e;
+}
+
+.extra-section-header {
+  margin-top: 2px;
+  margin-bottom: 0px;
+}
+
+/* ===== Para Kreator Section ===== */
+.creators-scroll-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 0 0 2px 0;
+  margin-top: 2px;
+  margin-bottom: 0px;
+  scrollbar-width: none;
+}
+
+.creators-scroll-list::-webkit-scrollbar {
+  display: none;
+}
+
+.creator-card {
+  flex: 0 0 115px;
+  width: 115px;
+  background-color: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px; /* Reduced roundedness */
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  text-align: center;
+}
+
+.creator-card-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+  margin-bottom: 2px;
+}
+
+.creator-card-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.creator-card-followers {
+  font-size: 9.5px;
+  color: #64748b;
+}
+
+.creator-follow-btn {
+  background-color: #194e9e;
+  color: #ffffff;
+  border: none;
+  border-radius: 50px;
+  padding: 4px 12px;
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 3px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.creator-follow-btn.following {
+  background-color: #f1f5f9;
+  color: #194e9e;
+  border: 1px solid #cbd5e1;
+}
+
+/* ===== Event Paling Laku Special Section (Single Card Infinite Loop) ===== */
+.most-popular-wrapper {
+  background-color: rgba(219, 234, 254, 0.35); /* Soft blue container matching prompt */
+  padding: 8px 16px;
+  margin-left: -16px;
+  margin-right: -16px;
+  margin-top: 2px;
+  margin-bottom: 0px;
+  width: calc(100% + 32px);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 10px rgba(25, 78, 158, 0.03);
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.most-popular-carousel-single {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.most-popular-track-single {
+  display: flex;
+  width: 100%;
+}
+
+.most-popular-slide-single {
+  flex: 0 0 100%;
+  width: 100%;
+}
+
+.most-popular-card-single {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 8px; /* Reduced roundedness on image container */
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+
+.mp-single-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.mp-single-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: #194e9e;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 50px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.mp-single-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 100%);
+  padding: 12px 12px 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  color: #ffffff;
+}
+
+.mp-single-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.payout-label {
-  font-size: 11px;
-  color: var(--dark); /* Black text color */
-  font-weight: 500; /* Not too thin, not too bold */
-  text-transform: none;
+.mp-single-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 210px;
 }
 
-.payout-amount {
-  font-size: 16px;
-  font-weight: 600; /* Balanced semi-bold text, not too thin or bold */
-  color: var(--dark); /* Black color payout amount */
-}
 
-.payout-btn {
-  background-color: var(--primary-base); /* Blue color button */
-  color: var(--white);
-  border: none;
-  border-radius: 12px; /* standardized rounded corners */
-  padding: 6px 12px; /* Smaller button size */
-  font-size: 11px; /* Smaller button font size */
-  font-weight: 600;
+.most-popular-dots {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.mp-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: rgba(25, 78, 158, 0.3);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
 }
 
-.payout-btn:hover {
-  background-color: var(--primary-light-700);
-  opacity: 0.95;
+.mp-dot.active {
+  width: 14px;
+  border-radius: 4px;
+  background-color: #194e9e;
 }
 
-.arrow-icon {
-  width: 12px;
-  height: 12px;
+.arrow-right-icon {
+  width: 20px;
+  height: 20px;
 }
 
-/* White background container wrapping event list styled as full screen section */
+.slider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.slider-dot.active {
+  width: 16px;
+  background-color: white;
+}
+
+/* White Container for Event Cards */
 .events-container {
   background-color: var(--white);
-  border-top-left-radius: 16px; /* rounded top left corner matching mockup */
-  border-top-right-radius: 16px; /* rounded top right corner matching mockup */
-  padding: 96px 16px 84px 16px; /* increased top padding to shift event cards slightly lower down */
-  margin: -64px -16px 0 -16px; /* pulled higher up to make the blue background bottom side shorter */
   position: relative;
   z-index: 2;
 }
@@ -794,24 +1892,33 @@ const handleTarikSaldo = () => {
 /* Event Cards */
 .cards-list-section {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-direction: row;
+  overflow-x: auto;
+  gap: 16px;
+  padding-bottom: 16px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.cards-list-section::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
 }
 
 .event-card {
   background-color: var(--white);
   border: 1px solid var(--light-grey);
-  border-radius: 12px; /* standardized rounded corners */
+  border-radius: 8px; /* reduced rounded corners */
   overflow: hidden;
   display: flex;
   flex-direction: column;
   box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  flex: 0 0 85%; /* Widened again */
 }
 
 .card-thumbnail-wrapper {
   position: relative;
   width: 100%;
-  height: 160px;
+  height: 130px; /* Reduced height */
   background-color: var(--light-grey);
 }
 
@@ -872,10 +1979,10 @@ const handleTarikSaldo = () => {
 }
 
 .card-info {
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .event-card-title {
@@ -1011,31 +2118,37 @@ const handleTarikSaldo = () => {
 /* Bottom Nav styles */
 .bottom-nav {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 68px;
-  background-color: var(--white);
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  bottom: 24px;
+  left: 20px;
+  right: 20px;
+  height: 64px;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 8px;
+  padding: 0 12px;
   z-index: 10;
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08), 0 -2px 10px rgba(0, 0, 0, 0.04); /* stronger visible shadow */
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
-  transform: translateY(0);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  transform: translateY(0) scale(1);
+  transform-origin: center bottom;
   opacity: 1;
 }
 
+.bottom-nav.nav-scrolled {
+  transform: scale(0.85); /* Removed translateY to keep it higher */
+  height: 56px;
+  border-radius: 28px;
+  bottom: 24px; /* Kept at same height as normal nav */
+}
+
 .bottom-nav.hidden-nav {
-  transform: translateY(100%);
+  transform: translateY(100px);
   opacity: 0;
-  height: 0;
-  padding: 0;
-  overflow: hidden;
-  border: none;
   pointer-events: none;
 }
 
@@ -1050,7 +2163,7 @@ const handleTarikSaldo = () => {
   color: var(--grey);
   cursor: pointer;
   padding: 4px 4px; /* adjusted padding to keep balance */
-  transition: color 0.2s;
+  transition: color 0.2s, transform 0.2s;
   flex: 1;
   height: 100%;
   position: relative;
@@ -1059,6 +2172,7 @@ const handleTarikSaldo = () => {
 
 .nav-tab:hover {
   color: var(--dark-grey);
+  transform: translateY(-2px);
 }
 
 .tab-icon {
@@ -1067,9 +2181,14 @@ const handleTarikSaldo = () => {
 }
 
 .tab-icon-image {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
+  transition: transform 0.2s;
+}
+
+.nav-tab.active .tab-icon-image {
+  transform: scale(1.05);
 }
 
 .tab-label {
@@ -1078,13 +2197,13 @@ const handleTarikSaldo = () => {
 }
 
 .home-label {
-  margin-top: -6px; /* pull Home label up to align with smaller icons */
+  margin-top: -4px; /* pull Home label up to align with smaller icons */
 }
 
 /* Shift entire Home tab contents up slightly */
 .home-tab .tab-icon-image,
 .home-tab .home-label {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
 }
 
 /* Active tab style with top indicator line and blue text */
@@ -1094,15 +2213,7 @@ const handleTarikSaldo = () => {
 }
 
 .nav-tab.active::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 44px;
-  height: 3px;
-  background-color: var(--primary-base);
-  border-radius: 0 0 4px 4px;
+  display: none;
 }
 
 /* ==========================================
@@ -2679,4 +3790,262 @@ const handleTarikSaldo = () => {
 }
 .merch-empty-desc { font-size: 13px; color: #64748b; line-height: 1.6; margin: 0; }
 
+/* ===== HOME REDESIGN STYLES (Matching Image) ===== */
+.navbar-header.navbar-home {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 50;
+  background-color: #ffffff;
+  padding: 12px 16px;
+  height: auto;
+  border-bottom: 1px solid #f1f5f9;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.navbar-header.navbar-home.navbar-scrolled {
+  background-color: #194e9e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 14px rgba(25, 78, 158, 0.25);
+}
+
+.home-nav-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.home-nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.account-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.nav-menu-lines-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.menu-lines-icon {
+  width: 24px;
+  height: 24px;
+  color: #194e9e;
+  transition: color 0.35s ease;
+}
+
+.navbar-scrolled .menu-lines-icon {
+  color: #ffffff;
+}
+
+.account-text-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  transition: color 0.35s ease;
+}
+
+.navbar-scrolled .account-name {
+  color: #ffffff;
+}
+
+.account-subtitle {
+  font-size: 8.5px;
+  color: #64748b;
+  opacity: 0.85;
+  transition: color 0.35s ease;
+}
+
+.navbar-scrolled .account-subtitle {
+  color: #a5c7f8;
+}
+
+.nav-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-icon-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  padding: 4px;
+  transition: opacity 0.2s ease;
+}
+
+.nav-icon-btn:hover {
+  opacity: 0.8;
+}
+
+.header-action-icon {
+  width: 20px;
+  height: 20px;
+  color: #194e9e;
+  transition: color 0.35s ease;
+}
+
+.navbar-scrolled .header-action-icon {
+  color: #ffffff;
+}
+
+.notification-badge-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  background-color: #16a34a;
+  border-radius: 50%;
+  border: 1.5px solid #194e9e;
+}
+
+.home-search-bar {
+  display: flex;
+  align-items: center;
+  background-color: #f5f6f8;
+  border: 1px solid #e5e7eb;
+  border-radius: 50px;
+  padding: 0 14px;
+  height: 42px;
+  width: 100%;
+}
+
+.search-bar-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  stroke: #194e9e;
+}
+
+.search-bar-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12px;
+  color: #1f2937;
+  flex: 1;
+  width: 100%;
+}
+
+.search-filter-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+
+
+.home-redesign-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: #ffffff;
+}
+
+/* ===== Image Slider Styles (Height Shortened to 75px - Ultra Slim) ===== */
+.slider-container {
+  position: relative;
+  width: 100%;
+  height: 75px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.slider-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+}
+
+.slide-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.slider-dots {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  z-index: 2;
+}
+
+.slider-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.slider-dot.active {
+  width: 14px;
+  border-radius: 4px;
+  background-color: #194e9e;
+}
+
+/* Full Mobile Responsiveness */
+@media (max-width: 480px) {
+  .mobile-wrapper {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .home-redesign-body {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  .slider-container {
+    height: 70px;
+  }
+}
 </style>
