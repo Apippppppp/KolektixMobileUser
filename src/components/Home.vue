@@ -644,7 +644,7 @@ const handleTarikSaldo = () => {
 
       <!-- Explore tab content template -->
       <template v-else-if="activeTab === 'explore'">
-        <Explore :events="events" @select-event="(e) => { selectedEvent = e; activeTab = 'event-detail'; }" />
+        <Explore :events="events" />
       </template>
 
       <!-- Home tab content template -->
@@ -708,7 +708,6 @@ const handleTarikSaldo = () => {
               v-for="event in events" 
               :key="event.id" 
               class="event-card"
-              @click="selectedEvent = event; activeTab = 'event-detail'"
             >
               <!-- Card Thumbnail Area -->
               <div class="card-thumbnail-wrapper">
@@ -779,7 +778,6 @@ const handleTarikSaldo = () => {
                 >
                   <div 
                     class="event-card coming-soon-card"
-                    @click="selectedEvent = event; activeTab = 'event-detail'"
                   >
                     <!-- Card Thumbnail Area -->
                     <div class="card-thumbnail-wrapper">
@@ -850,7 +848,6 @@ const handleTarikSaldo = () => {
               v-for="event in popularEvents" 
               :key="event.id" 
               class="event-card"
-              @click="selectedEvent = event; activeTab = 'event-detail'"
             >
               <!-- Card Thumbnail Area -->
               <div class="card-thumbnail-wrapper">
@@ -921,7 +918,6 @@ const handleTarikSaldo = () => {
                   v-for="(event, idx) in mpLoopEvents" 
                   :key="idx" 
                   class="most-popular-slide-single"
-                  @click="selectedEvent = event; activeTab = 'event-detail'"
                 >
                   <div class="most-popular-card-single">
                     <img :src="event.image" :alt="event.title" class="mp-single-img" />
@@ -972,10 +968,10 @@ const handleTarikSaldo = () => {
       </template>
 
       <!-- Event Component -->
-      <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" @lihat-detail="(e) => { selectedEvent = e; activeTab = 'event-detail'; }" />
+      <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" />
 
-      <!-- Event Detail Component -->
-      <EventDetail v-else-if="activeTab === 'event-detail'" :event="selectedEvent" @back="activeTab = 'event'" />
+      <!-- Event Detail Component (Disabled for now) -->
+      <!-- <EventDetail v-else-if="activeTab === 'event-detail'" :event="selectedEvent" @back="activeTab = 'event'" /> -->
 
       <!-- Create Event Component -->
       <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
@@ -1207,31 +1203,16 @@ const handleTarikSaldo = () => {
 
 .navbar-header {
   background-color: var(--primary-base);
-  height: 56px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
+  padding-top: env(safe-area-inset-top, 0px);
   flex-shrink: 0;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
   transform: translateY(0);
   opacity: 1;
-}
-
-/* Home specific navbar styles for smooth transition */
-.navbar-header.navbar-home {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 50;
-  background-color: transparent;
-  box-shadow: none;
-}
-
-.navbar-header.navbar-home.navbar-scrolled {
-  background-color: var(--primary-base);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-header.hidden-header {
@@ -1333,10 +1314,16 @@ const handleTarikSaldo = () => {
 .content-scroll-area {
   flex-grow: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0 0 84px 0; /* Remove top/side padding to allow full-width banner */
   display: flex;
   flex-direction: column;
   scrollbar-width: none;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
 }
 
 .content-scroll-area::-webkit-scrollbar {
@@ -1448,6 +1435,13 @@ const handleTarikSaldo = () => {
   margin-top: 4px;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .category-quick-scroll::-webkit-scrollbar {
@@ -1531,6 +1525,7 @@ const handleTarikSaldo = () => {
   align-items: center;
   margin-top: 2px;
   margin-bottom: 0px;
+  flex-shrink: 0;
 }
 
 .top-events-header.coming-soon-header {
@@ -1557,9 +1552,13 @@ const handleTarikSaldo = () => {
   margin-top: 2px;
   margin-bottom: 0px;
   width: calc(100% + 32px);
+  max-width: calc(100% + 32px);
+  box-sizing: border-box;
   overflow: hidden;
   position: relative;
   box-shadow: 0 2px 10px rgba(25, 78, 158, 0.03);
+  touch-action: pan-y;
+  flex-shrink: 0;
 }
 
 .promo-banner-box {
@@ -1680,6 +1679,10 @@ const handleTarikSaldo = () => {
   margin-top: 2px;
   margin-bottom: 0px;
   scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
 }
 
 .creators-scroll-list::-webkit-scrollbar {
@@ -1755,12 +1758,15 @@ const handleTarikSaldo = () => {
   margin-top: 2px;
   margin-bottom: 0px;
   width: calc(100% + 32px);
+  max-width: calc(100% + 32px);
+  box-sizing: border-box;
   overflow: hidden;
   position: relative;
   box-shadow: 0 2px 10px rgba(25, 78, 158, 0.03);
   cursor: grab;
   user-select: none;
   touch-action: pan-y;
+  flex-shrink: 0;
 }
 
 .most-popular-carousel-single {
@@ -1898,6 +1904,11 @@ const handleTarikSaldo = () => {
   padding-bottom: 16px;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .cards-list-section::-webkit-scrollbar {
@@ -3799,16 +3810,18 @@ const handleTarikSaldo = () => {
   z-index: 50;
   background-color: #ffffff;
   padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
   height: auto;
   border-bottom: 1px solid #f1f5f9;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
-  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease, padding 0.35s ease;
 }
 
 .navbar-header.navbar-home.navbar-scrolled {
   background-color: #194e9e;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 14px rgba(25, 78, 158, 0.25);
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
 }
 
 .home-nav-container {
@@ -3964,22 +3977,35 @@ const handleTarikSaldo = () => {
 
 
 .home-redesign-body {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  touch-action: pan-y;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   background-color: #ffffff;
+  flex-shrink: 0;
+}
+
+.home-redesign-body > * {
+  flex-shrink: 0;
 }
 
 /* ===== Image Slider Styles (Height Shortened to 75px - Ultra Slim) ===== */
 .slider-container {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   height: 75px;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
+  touch-action: pan-y;
 }
 
 .slider-track {
@@ -3987,6 +4013,7 @@ const handleTarikSaldo = () => {
   width: 100%;
   height: 100%;
   transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  touch-action: pan-y;
 }
 
 .slide {
@@ -4037,11 +4064,26 @@ const handleTarikSaldo = () => {
     height: 100dvh;
     border-radius: 0;
     box-shadow: none;
+    overflow-x: hidden;
   }
 
   .home-redesign-body {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    touch-action: pan-y;
     padding: 12px;
     gap: 14px;
+  }
+
+  .coming-soon-wrapper,
+  .most-popular-wrapper {
+    margin-left: -12px;
+    margin-right: -12px;
+    padding: 8px 12px;
+    width: calc(100% + 24px);
+    max-width: calc(100% + 24px);
   }
 
   .slider-container {
