@@ -505,8 +505,8 @@ const closeTicketModal = () => {
 
 .top-events-title {
   font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 600;
+  color: #151416;
   margin: 0;
 }
 
@@ -585,7 +585,7 @@ const closeTicketModal = () => {
   background-color: #f1f5f9;
   pointer-events: none;
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .event-thumbnail {
@@ -601,76 +601,68 @@ const closeTicketModal = () => {
 .status-badge {
   position: absolute;
   top: 8px;
-  left: 8px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 20px;
-  padding: 3px 8px;
-  font-size: 9px;
+  left: -4px;
+  background-color: var(--primary-base);
+  color: #ffffff;
+  border-radius: 0 20px 20px 0;
+  padding: 3px 10px 3px 8px;
+  font-size: 8.5px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 4.5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.20);
   letter-spacing: 0.2px;
-  color: #0f172a;
+  text-transform: none;
+  z-index: 2;
 }
 
-.status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
+.status-badge::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-top: 4px solid var(--primary-dark);
+  border-left: 4px solid transparent;
 }
 
 .status-badge.live {
-  color: #15803d;
-  background: rgba(240, 253, 244, 0.94);
-  border-color: rgba(187, 247, 208, 0.8);
+  background-color: #16a34a;
+  color: #ffffff;
 }
 
-.status-badge.live .status-dot {
-  background-color: #22c55e;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
-  animation: live-dot-blink 1.2s infinite ease-in-out;
-}
-
-@keyframes live-dot-blink {
-  0%, 100% { opacity: 0.4; transform: scale(0.85); }
-  50% { opacity: 1; transform: scale(1.15); }
+.status-badge.live::before {
+  border-top-color: #14532d;
 }
 
 .status-badge.upcoming {
-  color: #c2410c;
-  background: rgba(255, 247, 237, 0.94);
-  border-color: rgba(254, 215, 170, 0.8);
-  padding: 3px 8px;
-  font-size: 9px;
+  background-color: var(--primary-base);
+  color: #ffffff;
 }
 
-.status-badge.upcoming .status-dot {
-  background-color: #f97316;
-  width: 5px;
-  height: 5px;
-  box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
+.status-badge.upcoming::before {
+  border-top-color: var(--primary-dark);
 }
 
 .status-badge.draft {
-  color: #b45309;
-  background: rgba(254, 252, 232, 0.94);
-  border-color: rgba(254, 240, 138, 0.8);
+  background-color: #d97706;
+  color: #ffffff;
 }
-.status-badge.draft .status-dot { background-color: #f59e0b; }
+
+.status-badge.draft::before {
+  border-top-color: #78350f;
+}
 
 .status-badge.ended {
-  color: #475569;
-  background: rgba(241, 245, 249, 0.94);
-  border-color: rgba(226, 232, 240, 0.8);
+  background-color: #64748b;
+  color: #ffffff;
 }
-.status-badge.ended .status-dot { background-color: #64748b; }
+
+.status-badge.ended::before {
+  border-top-color: #334155;
+}
 
 .card-info {
   padding: 10px 0 4px 0;
@@ -678,6 +670,14 @@ const closeTicketModal = () => {
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  justify-content: flex-start;
+}
+
+.creator-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
 }
 
 .event-title-wrapper {
@@ -697,12 +697,12 @@ const closeTicketModal = () => {
 .event-card-title {
   font-size: 13.5px;
   font-weight: 600; /* Slightly increased bold */
-  color: #0f172a;
+  color: #151416;
   line-height: 1.3;
   margin: 0;
   white-space: nowrap;
   flex-shrink: 0;
-  padding-right: 32px;
+  padding-right: 18px;
 }
 
 .event-card-title.static {

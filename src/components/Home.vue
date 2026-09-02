@@ -2494,7 +2494,7 @@ onMounted(() => {
   height: 110px; /* Shortened height */
   background-color: var(--light-grey);
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .event-thumbnail {
@@ -2507,66 +2507,67 @@ onMounted(() => {
 .status-badge {
   position: absolute;
   top: 8px;
-  left: 8px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 20px;
-  padding: 3px 8px;
-  font-size: 9px;
+  left: -4px;
+  background-color: var(--primary-base);
+  color: #ffffff;
+  border-radius: 0 20px 20px 0;
+  padding: 3px 10px 3px 8px;
+  font-size: 8.5px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 4.5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.20);
   letter-spacing: 0.2px;
+  text-transform: none;
+  z-index: 2;
 }
 
-.status-badge.live {
-  color: #15803d;
-  background: rgba(240, 253, 244, 0.94);
-  border-color: rgba(187, 247, 208, 0.8);
+.status-badge::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-top: 4px solid var(--primary-darker);
+  border-left: 4px solid transparent;
 }
 
-.status-badge.live .status-dot {
-  background-color: #22c55e;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
-  animation: live-dot-blink 1.2s infinite ease-in-out;
-}
+/* .status-badge.live {
+  background-color: #16a34a;
+  color: #ffffff;
+} */
 
-@keyframes live-dot-blink {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(0.85);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
+.status-badge.live::before {
+  border-top-color: #14532d;
 }
 
 .status-badge.upcoming {
-  color: #c2410c;
-  background: rgba(255, 247, 237, 0.94);
-  border-color: rgba(254, 215, 170, 0.8);
-  padding: 3px 8px;
-  font-size: 9px;
+  background-color: var(--primary-base);
+  color: #ffffff;
 }
 
-.status-badge.upcoming .status-dot {
-  background-color: #f97316;
-  width: 5px;
-  height: 5px;
-  box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
+.status-badge.upcoming::before {
+  border-top-color: var(--primary-dark);
 }
 
-.status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
+.status-badge.draft {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
+.status-badge.draft::before {
+  border-top-color: #78350f;
+}
+
+.status-badge.ended {
+  background-color: #64748b;
+  color: #ffffff;
+}
+
+.status-badge.ended::before {
+  border-top-color: #334155;
 }
 
 .card-info {
@@ -2646,6 +2647,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-top: auto;
 }
 
 .creator-avatar {
