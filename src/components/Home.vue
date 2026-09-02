@@ -655,10 +655,10 @@ const handleTarikSaldo = () => {
     <!-- Top Nav Bar -->
     <header class="navbar-header" :class="{ 
       'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail' || isChatRoomActive,
-      'navbar-home': activeTab === 'home' || activeTab === 'chat',
+      'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event',
       'navbar-scrolled': isScrolledFromTop 
     }">
-      <template v-if="activeTab === 'home' || activeTab === 'chat'">
+      <template v-if="activeTab === 'home' || activeTab === 'chat' || activeTab === 'event'">
         <div class="home-nav-container">
           <!-- Top Row: Account Greeting & Simple Action Icons -->
           <div class="home-nav-top">

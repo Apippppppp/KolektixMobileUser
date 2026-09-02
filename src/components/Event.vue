@@ -23,70 +23,93 @@ const props = defineProps({
 
 const emit = defineEmits(['switch-tab', 'lihat-detail']);
 
-const currentFilter = ref(props.initialFilter); // 'semua' | 'aktif' | 'draf' | 'lalu'
+const currentFilter = ref(props.initialFilter);
+const selectedCategory = ref('Semua');
+const selectedTicketModal = ref(null);
 
-// Keep currentFilter in sync when parent updates the prop (e.g. after create event)
+const categories = ['Semua', 'Konser Musik', 'Festival', 'Pameran Art', 'Workshop', 'Olahraga'];
+
 watch(() => props.initialFilter, (val) => {
   currentFilter.value = val;
 });
 
-const filteredEvents = computed(() => {
-  if (currentFilter.value === 'semua') {
-    return props.events;
-  } else if (currentFilter.value === 'aktif') {
-    return props.events.filter(e => e.status === 'Live' || e.status === 'Upcoming');
+// Base Filtered List based on tab and category
+const baseFilteredEvents = computed(() => {
+  let list = props.events || [];
+
+  if (currentFilter.value === 'aktif') {
+    list = list.filter(e => e.status === 'Live' || e.status === 'Upcoming');
   } else if (currentFilter.value === 'draf') {
-    return props.events.filter(e => e.status === 'Draft');
+    list = list.filter(e => e.status === 'Draft');
   } else if (currentFilter.value === 'lalu') {
-    return props.events.filter(e => e.status === 'Ended');
+    list = list.filter(e => e.status === 'Ended');
   }
-  return props.events;
+
+  if (selectedCategory.value !== 'Semua') {
+    list = list.filter(e => {
+      const cat = e.category || 'Konser Musik';
+      return cat.toLowerCase().includes(selectedCategory.value.toLowerCase());
+    });
+  }
+
+  return list;
+});
+
+// Section 1: Event Populer
+const popularEvents = computed(() => {
+  return [...baseFilteredEvents.value].sort((a, b) => (b.sold || 0) - (a.sold || 0));
+});
+
+// Section 2: Rekomendasi Untukmu
+const recommendedEvents = computed(() => {
+  return baseFilteredEvents.value.filter((e, idx) => idx % 2 === 0 || e.status === 'Live');
+});
+
+// Section 3: Event Pilihan Terfavorit
+const allEventsList = computed(() => {
+  return baseFilteredEvents.value;
 });
 
 const handleLihatDetail = (event) => {
   emit('lihat-detail', event);
 };
 
-const handleEdit = (event) => {
-  alert(`Edit Event: ${event.title}`);
+const openTicketModal = (event) => {
+  selectedTicketModal.value = event;
 };
 
-const handlePenjualan = (event) => {
-  alert(`Laporan Penjualan Event: ${event.title}`);
-};
-
-const handleCreateEvent = () => {
-  alert('Fitur Buat Event Baru sedang dalam pengembangan');
+const closeTicketModal = () => {
+  selectedTicketModal.value = null;
 };
 </script>
 
 <template>
-  <div class="event-list-page">
-    <!-- Filter Tabs (Styled as Checkin Tabs) -->
-    <div class="event-filters-container">
+  <div class="kolektix-event-page">
+    <!-- TOP EVENT NAV TABS -->
+    <div class="event-nav-tabs">
       <button 
-        class="filter-btn" 
+        class="tab-btn" 
         :class="{ active: currentFilter === 'semua' }" 
         @click="currentFilter = 'semua'"
       >
         Semua Event
       </button>
       <button 
-        class="filter-btn" 
+        class="tab-btn" 
         :class="{ active: currentFilter === 'aktif' }" 
         @click="currentFilter = 'aktif'"
       >
         Event Aktif
       </button>
       <button 
-        class="filter-btn" 
+        class="tab-btn" 
         :class="{ active: currentFilter === 'draf' }" 
         @click="currentFilter = 'draf'"
       >
         Event Draf
       </button>
       <button 
-        class="filter-btn" 
+        class="tab-btn" 
         :class="{ active: currentFilter === 'lalu' }" 
         @click="currentFilter = 'lalu'"
       >
@@ -94,36 +117,68 @@ const handleCreateEvent = () => {
       </button>
     </div>
 
-    <!-- ======= EVENT LIST ======= -->
-    <div class="event-tab-content">
-      <div class="events-container-alt">
-        <section class="cards-list-section" v-if="filteredEvents.length > 0">
-          <div v-for="event in filteredEvents" :key="event.id" class="event-card">
-            <!-- Thumbnail wrapper -->
+    <!-- CATEGORIES SCROLL CHIPS -->
+    <div class="category-pills-bar">
+      <div class="pills-scroll-row">
+        <button 
+          v-for="cat in categories" 
+          :key="cat"
+          class="cat-pill-btn"
+          :class="{ active: selectedCategory === cat }"
+          @click="selectedCategory = cat"
+        >
+          {{ cat }}
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN EVENT SECTIONS (EXACT HOME PAGE CARD DESIGN & 1-LINE HORIZONTAL SCROLL) -->
+    <div class="event-page-body">
+
+      <!-- SECTION 1: EVENT POPULER -->
+      <section v-if="popularEvents.length > 0" class="home-section-group">
+        <div class="top-events-header">
+          <div class="title-with-blue-icon">
+            <lottie-player 
+              src="/media/Fire.json" 
+              background="transparent" 
+              speed="1" 
+              class="section-title-lottie" 
+              loop 
+              autoplay
+            ></lottie-player>
+            <h2 class="top-events-title">Event Populer</h2>
+          </div>
+          <button class="see-all-icon-btn" @click="selectedCategory = 'Semua'" title="Lihat Semua">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="events-horizontal-row">
+          <div 
+            v-for="event in popularEvents" 
+            :key="'pop-' + event.id" 
+            class="event-card home-card-style"
+            @click="handleLihatDetail(event)"
+          >
+            <!-- Card Thumbnail Area -->
             <div class="card-thumbnail-wrapper">
               <img :src="event.image" :alt="event.title" class="event-thumbnail" />
-              <div class="status-badge" :class="event.status.toLowerCase()">
+              <div class="status-badge" :class="(event.status || 'Upcoming').toLowerCase()">
                 <span class="status-dot"></span>
-                <span>{{ event.status === 'Draft' ? 'Draf' : event.status }}</span>
+                <span>{{ event.status === 'Draft' ? 'Draf' : (event.status || 'Upcoming') }}</span>
               </div>
-              <!-- Floating Edit Icon Button -->
-              <button class="floating-edit-btn" @click.stop="handleEdit(event)" title="Edit Event">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="edit-icon-svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-              </button>
             </div>
 
-            <!-- Card Info -->
+            <!-- Card Info Area -->
             <div class="card-info">
               <div class="event-title-wrapper">
-                <div v-if="event.title && event.title.length > 20" class="event-title-marquee">
-                  <h3 class="event-card-title">{{ event.title }}</h3>
-                  <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
-                </div>
-                <h3 v-else class="event-card-title static">{{ event.title }}</h3>
+                <h3 class="event-card-title static">{{ event.title }}</h3>
               </div>
 
+              <!-- Creator Profile & Verified Badge Row -->
               <div class="creator-profile-row">
                 <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                 <span class="creator-name">{{ event.organizer }}</span>
@@ -134,65 +189,209 @@ const handleCreateEvent = () => {
                 </span>
               </div>
 
+              <!-- Location Row -->
               <div class="meta-row" v-if="event.location">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                   <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
                 </svg>
                 <div class="meta-text-wrapper">
-                  <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
-                    <span class="meta-text">{{ event.location }}</span>
-                    <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
-                  </div>
-                  <span v-else class="meta-text static">{{ event.location }}</span>
+                  <span class="meta-text static">{{ event.location }}</span>
                 </div>
               </div>
 
+              <!-- Date Row -->
               <div class="meta-row" v-if="event.date">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                   <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
                 </svg>
                 <div class="meta-text-wrapper">
-                  <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
-                    <span class="meta-text">{{ event.date }}</span>
-                    <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
-                  </div>
-                  <span v-else class="meta-text static">{{ event.date }}</span>
+                  <span class="meta-text static">{{ event.date }}</span>
                 </div>
               </div>
 
+              <!-- Price Row -->
               <div class="price-row">
                 <span class="event-card-price">{{ event.price }}</span>
               </div>
 
-              <div class="card-footer-row">
-                <div class="ticket-sales-info">
-                  <div class="sales-text-row">
-                    <span class="sales-text">{{ event.sold }}/{{ event.total }} Tiket Terjual</span>
-                    <span class="sales-percent">{{ Math.round((event.sold / event.total) * 100) }}%</span>
-                  </div>
-                  <div class="sales-progress-bar">
-                    <div
-                      class="sales-progress-fill"
-                      :style="{ width: `${(event.sold / event.total) * 100}%` }"
-                    ></div>
-                  </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: REKOMENDASI UNTUKMU -->
+      <section v-if="recommendedEvents.length > 0" class="home-section-group">
+        <div class="top-events-header">
+          <div class="title-with-blue-icon">
+            <div class="lottie-box-wrapper">
+              <lottie-player 
+                src="/media/star.json" 
+                background="transparent" 
+                speed="1" 
+                class="section-title-lottie star-lottie" 
+                loop 
+                autoplay
+              ></lottie-player>
+            </div>
+            <h2 class="top-events-title">Rekomendasi Untukmu</h2>
+          </div>
+          <button class="see-all-icon-btn" @click="selectedCategory = 'Semua'" title="Lihat Semua">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="events-horizontal-row">
+          <div 
+            v-for="event in recommendedEvents" 
+            :key="'rec-' + event.id" 
+            class="event-card home-card-style"
+            @click="handleLihatDetail(event)"
+          >
+            <!-- Card Thumbnail Area -->
+            <div class="card-thumbnail-wrapper">
+              <img :src="event.image" :alt="event.title" class="event-thumbnail" />
+              <div class="status-badge" :class="(event.status || 'Upcoming').toLowerCase()">
+                <span class="status-dot"></span>
+                <span>{{ event.status === 'Draft' ? 'Draf' : (event.status || 'Upcoming') }}</span>
+              </div>
+            </div>
+
+            <!-- Card Info Area -->
+            <div class="card-info">
+              <div class="event-title-wrapper">
+                <h3 class="event-card-title static">{{ event.title }}</h3>
+              </div>
+
+              <!-- Creator Profile & Verified Badge Row -->
+              <div class="creator-profile-row">
+                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                <span class="creator-name">{{ event.organizer }}</span>
+                <span class="verified-badge">
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </span>
+              </div>
+
+              <!-- Location Row -->
+              <div class="meta-row" v-if="event.location">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                  <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
+                </svg>
+                <div class="meta-text-wrapper">
+                  <span class="meta-text static">{{ event.location }}</span>
                 </div>
               </div>
 
-              <!-- Full-width primary action button -->
-              <div class="card-action-wrapper">
-                <button class="card-btn btn-primary" @click="handleLihatDetail(event)">
-                  Lihat Detail
-                </button>
+              <!-- Date Row -->
+              <div class="meta-row" v-if="event.date">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                  <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                </svg>
+                <div class="meta-text-wrapper">
+                  <span class="meta-text static">{{ event.date }}</span>
+                </div>
+              </div>
+
+              <!-- Price Row -->
+              <div class="price-row">
+                <span class="event-card-price">{{ event.price }}</span>
               </div>
 
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- Empty state fallback if no events match the active sub-tab -->
-        <div v-else class="event-empty-state">
-          <div class="empty-state-blue-line"></div>
+      <!-- SECTION 3: EVENT PILIHAN TERFAVORIT -->
+      <section v-if="allEventsList.length > 0" class="home-section-group">
+        <div class="top-events-header">
+          <div class="title-with-blue-icon">
+            <lottie-player 
+              src="/media/Ticket.json" 
+              background="transparent" 
+              speed="1" 
+              class="section-title-lottie" 
+              loop 
+              autoplay
+            ></lottie-player>
+            <h2 class="top-events-title">Event Pilihan Terfavorit</h2>
+          </div>
+          <button class="see-all-icon-btn" @click="selectedCategory = 'Semua'" title="Lihat Semua">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="events-horizontal-row">
+          <div 
+            v-for="event in allEventsList" 
+            :key="'all-' + event.id" 
+            class="event-card home-card-style"
+            @click="handleLihatDetail(event)"
+          >
+            <!-- Card Thumbnail Area -->
+            <div class="card-thumbnail-wrapper">
+              <img :src="event.image" :alt="event.title" class="event-thumbnail" />
+              <div class="status-badge" :class="(event.status || 'Upcoming').toLowerCase()">
+                <span class="status-dot"></span>
+                <span>{{ event.status === 'Draft' ? 'Draf' : (event.status || 'Upcoming') }}</span>
+              </div>
+            </div>
+
+            <!-- Card Info Area -->
+            <div class="card-info">
+              <div class="event-title-wrapper">
+                <h3 class="event-card-title static">{{ event.title }}</h3>
+              </div>
+
+              <!-- Creator Profile & Verified Badge Row -->
+              <div class="creator-profile-row">
+                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                <span class="creator-name">{{ event.organizer }}</span>
+                <span class="verified-badge">
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </span>
+              </div>
+
+              <!-- Location Row -->
+              <div class="meta-row" v-if="event.location">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                  <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
+                </svg>
+                <div class="meta-text-wrapper">
+                  <span class="meta-text static">{{ event.location }}</span>
+                </div>
+              </div>
+
+              <!-- Date Row -->
+              <div class="meta-row" v-if="event.date">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
+                  <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                </svg>
+                <div class="meta-text-wrapper">
+                  <span class="meta-text static">{{ event.date }}</span>
+                </div>
+              </div>
+
+              <!-- Price Row -->
+              <div class="price-row">
+                <span class="event-card-price">{{ event.price }}</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EMPTY STATE FALLBACK -->
+      <div v-if="allEventsList.length === 0" class="empty-events-state">
+        <div class="empty-lottie-box">
           <lottie-player 
             src="/media/sad emotion.json" 
             background="transparent" 
@@ -201,293 +400,447 @@ const handleCreateEvent = () => {
             loop 
             autoplay
           ></lottie-player>
-          <p class="empty-text">Belum ada event di kategori ini</p>
         </div>
+        <h3 class="empty-title">Tidak ada event di kategori ini</h3>
+        <p class="empty-desc">Silakan pilih kategori atau filter tab lainnya.</p>
+        <button class="reset-filter-btn" @click="selectedCategory = 'Semua'; currentFilter = 'semua';">Reset Filter</button>
       </div>
+
     </div>
 
-    <!-- Floating "Buat Event" Action Button -->
-    <button class="floating-create-btn" @click="emit('switch-tab', 'create-event')" title="Buat Event">
-      <lottie-player
-        src="/media/addanimation.json"
-        background="transparent"
-        speed="1"
-        style="width: 56px; height: 56px;"
-        loop
-        autoplay
-      ></lottie-player>
-    </button>
   </div>
 </template>
 
 <style scoped>
-.event-list-page {
+.kolektix-event-page {
   display: flex;
   flex-direction: column;
   width: 100%;
-  background-color: #f8fafc;
+  background-color: #ffffff;
+  font-family: 'Poppins', sans-serif;
+  min-height: 100%;
 }
 
-/* Filter Tabs Container */
-.event-filters-container {
+/* TOP EVENT NAV TABS */
+.event-nav-tabs {
   display: flex;
   border-bottom: 1px solid #e2e8f0;
   width: 100%;
-  padding: 0 16px;
+  padding: 0 12px;
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: white;
+  background-color: #ffffff;
   overflow-x: auto;
-  flex-wrap: nowrap;
-  scrollbar-width: none; /* Hide scrollbar Firefox */
-  -ms-overflow-style: none; /* Hide scrollbar IE/Edge */
-}
-.event-filters-container::-webkit-scrollbar {
-  display: none; /* Hide scrollbar Chrome/Safari */
+  scrollbar-width: none;
 }
 
-/* Filter Tab Buttons */
-.filter-btn {
-  flex: 0 0 auto; /* prevent shrink */
+.event-nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-btn {
+  flex: 0 0 auto;
   background: none;
   border: none;
-  padding: 12px 16px;
+  padding: 12px 14px;
   font-size: 13px;
   font-weight: 500;
   color: #64748b;
   cursor: pointer;
   position: relative;
-  text-align: center;
-  transition: color 0.2s;
-  font-family: var(--font-sans);
-  white-space: nowrap; /* prevent wrapping */
+  transition: color 0.2s ease;
+  white-space: nowrap;
 }
-.filter-btn.active {
-  color: #194E9E;
-  font-weight: 400; /* Active tab button text should NOT be bold */
+
+.tab-btn.active {
+  color: #194e9e;
+  font-weight: 600;
 }
-.filter-btn.active::after {
+
+.tab-btn.active::after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 3px;
-  background-color: #194E9E;
+  background-color: #194e9e;
   border-radius: 3px 3px 0 0;
 }
 
-/* Container */
-.events-container-alt { padding: 16px 12px 120px 12px; }
+/* CATEGORIES PILLS BAR */
+.category-pills-bar {
+  background-color: #ffffff;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
 
-/* Event Cards */
-.cards-list-section { display: flex; flex-direction: column; gap: 20px; }
-.event-card {
-  background-color: #fff;
+.pills-scroll-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pills-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.cat-pill-btn {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.cat-pill-btn.active {
+  background-color: #194e9e;
+  color: #ffffff;
+  border-color: #194e9e;
+  font-weight: 600;
+}
+
+/* MAIN BODY & SECTIONS */
+.event-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0 110px 0;
+}
+
+.home-section-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.top-events-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.title-with-blue-icon {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lottie-box-wrapper {
+  width: 22px;
+  height: 22px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.section-title-lottie {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.section-title-lottie.star-lottie {
+  width: 65px;
+  height: 65px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .section-title-lottie {
+    width: 20px;
+    height: 20px;
+  }
+
+  .lottie-box-wrapper {
+    width: 20px;
+    height: 20px;
+  }
+
+  .section-title-lottie.star-lottie {
+    width: 58px;
+    height: 58px;
+  }
+}
+
+.section-title-svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #194e9e;
+}
+
+.top-events-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.see-all-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #f0f6ff;
+  border: 1px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.see-all-icon-btn:hover {
+  background-color: #dbeafe;
+}
+
+.arrow-right-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.see-all-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #194e9e;
+  cursor: pointer;
+}
+
+/* 1-LINE HORIZONTAL SCROLL CONTAINERS */
+.events-horizontal-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 16px 12px 16px;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.events-horizontal-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* EXACT HOME PAGE EVENT CARD STYLING */
+.home-card-style {
+  flex: 0 0 255px;
+  width: 255px;
+  background-color: #ffffff;
   border: 1px solid #f1f5f9;
   border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.card-thumbnail-wrapper { position: relative; width: 100%; height: 160px; background-color: #f1f5f9; }
-.event-thumbnail { width: 100%; height: 100%; object-fit: cover; }
-.status-badge {
-  position: absolute; top: 12px; left: 12px;
-  background-color: #fff; border-radius: 20px; padding: 3px 8px;
-  font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-.status-badge.live { color: #16a34a; background-color: #f0fdf4; }
-.status-badge.live .status-dot { background-color: #16a34a; }
-.status-badge.upcoming { color: #ca8a04; background-color: #fefce8; }
-.status-badge.upcoming .status-dot { background-color: #ca8a04; }
-.status-badge.ended { color: #64748b; background-color: #f8fafc; }
-.status-badge.ended .status-dot { background-color: #64748b; }
-/* Draft badge — simple and clean */
-.status-badge.draft {
-  color: #475569;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  box-shadow: none;
-}
-.status-badge.draft .status-dot { background-color: #94a3b8; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; }
 
-.card-info { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.home-card-style:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.card-thumbnail-wrapper {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  background-color: #f1f5f9;
+}
+
+.event-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.status-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  color: #0f172a;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: #10b981;
+}
+
+.status-badge.live { color: #16a34a; }
+.status-badge.live .status-dot {
+  background-color: #16a34a;
+  animation: live-dot-blink 1s infinite alternate;
+}
+
+@keyframes live-dot-blink {
+  0% { opacity: 0.3; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1.1); }
+}
+
+.status-badge.upcoming { color: #ea580c; }
+.status-badge.upcoming .status-dot { background-color: #ea580c; }
+
+.status-badge.draft { color: #d97706; }
+.status-badge.draft .status-dot { background-color: #d97706; }
+
+.status-badge.ended { color: #64748b; }
+.status-badge.ended .status-dot { background-color: #64748b; }
+
+.card-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
 .event-title-wrapper {
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
-  position: relative;
-}
-
-.event-title-marquee {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  animation: cardTitleMarquee 12s linear infinite;
-  will-change: transform;
-}
-
-.event-card-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-  white-space: nowrap;
-  flex-shrink: 0;
-  padding-right: 18px;
 }
 
 .event-card-title.static {
-  padding-right: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.4;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creator-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.creator-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.creator-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #000000;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-@keyframes cardTitleMarquee {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-50%, 0, 0); }
-}
-.creator-profile-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-.creator-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
-.creator-name { font-size: 12px; font-weight: 500; color: #475569; }
-.verified-badge { color: #194E9E; display: flex; align-items: center; }
-.verified-check-svg { width: 14px; height: 14px; }
-.meta-row { display: flex; align-items: center; gap: 6px; overflow: hidden; width: 100%; }
-.meta-icon { width: 14px; height: 14px; color: #194E9E; flex-shrink: 0; }
-.meta-text-wrapper { flex: 1; overflow: hidden; white-space: nowrap; position: relative; min-width: 0; }
-.meta-text-marquee { display: inline-flex; align-items: center; white-space: nowrap; animation: metaTextMarquee 12s linear infinite; will-change: transform; }
-.meta-text { font-size: 12px; color: #475569; white-space: nowrap; flex-shrink: 0; padding-right: 18px; }
-.meta-text.static { padding-right: 0; overflow: hidden; text-overflow: ellipsis; }
-.price-row { margin-top: 4px; margin-bottom: 4px; }
-.event-card-price { font-size: 16px; font-weight: 700; color: #0f172a; }
-
-.card-footer-row { border-top: 1px solid #f1f5f9; padding-top: 12px; display: flex; align-items: center; }
-.ticket-sales-info { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
-.sales-text-row { display: flex; justify-content: space-between; align-items: center; }
-.sales-text { font-size: 12px; color: #0f172a; font-weight: 500; }
-.sales-percent { font-size: 12px; font-weight: 700; color: #0f172a; }
-.sales-progress-bar { width: 100%; height: 6px; background-color: #f1f5f9; border-radius: 4px; overflow: hidden; }
-.sales-progress-fill { height: 100%; background-color: #194E9E; border-radius: 4px; transition: width 0.5s ease; }
-
-/* Card Action Wrapper */
-.card-action-wrapper {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed #e2e8f0;
-}
-.card-btn {
+.verified-badge {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 38px;
-  box-sizing: border-box;
-  text-align: center;
-  width: 100%;
-}
-.btn-primary {
-  background-color: var(--primary-base, #194E9E);
-  color: white;
-  border: none;
-}
-.btn-primary:hover, .btn-primary:active {
-  background-color: #154388;
 }
 
-/* Floating Edit Button */
-.floating-edit-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: white;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
-  color: #194E9E;
-  transition: all 0.2s ease;
-  z-index: 5;
-}
-.floating-edit-btn:hover {
-  transform: scale(1.05);
-  background-color: #f1f5f9;
-}
-.edit-icon-svg {
+.verified-check-svg {
   width: 14px;
   height: 14px;
+  fill: #194e9e;
 }
 
-/* Empty State Styling */
-.event-empty-state {
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-icon {
+  width: 16px;
+  height: 16px;
+  color: #194e9e;
+  flex-shrink: 0;
+}
+
+.meta-text-wrapper {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.meta-text.static {
+  font-size: 12px;
+  color: #000000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.price-row {
+  margin-top: 4px;
+}
+
+.event-card-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000000;
+}
+
+/* EMPTY STATE */
+.empty-events-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 24px 80px;
+  padding: 60px 20px;
   text-align: center;
-  color: #94a3b8;
-  gap: 0;
-}
-.empty-state-blue-line {
-  width: 80px;
-  height: 4px;
-  background-color: #194E9E;
-  border-radius: 2px;
-  margin-bottom: -2px;
-}
-.empty-icon-svg {
-  width: 48px;
-  height: 48px;
-  color: #cbd5e1;
-}
-.empty-text {
-  font-size: 13px;
-  font-weight: 500;
-  margin-top: 16px;
 }
 
-/* Floating Create Event Button */
-.floating-create-btn {
-  position: fixed;
-  bottom: 84px;
-  right: 16px;
-  z-index: 99;
-  background-color: #194E9E;
-  border: 3px solid #194E9E;
-  border-radius: 50%;
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 12px 0 6px 0;
+}
+
+.empty-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.reset-filter-btn {
+  background-color: #194e9e;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 0;
-  overflow: hidden;
-  transition: transform 0.2s ease;
-  box-shadow: 0 4px 16px rgba(25, 78, 158, 0.4);
-}
-.floating-create-btn:hover {
-  transform: scale(1.05);
 }
 
-@media (min-width: 480px) {
-  .floating-create-btn {
-    right: calc(50% - 185px);
-  }
-}
 </style>
