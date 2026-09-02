@@ -1778,7 +1778,7 @@ onBeforeUnmount(() => {
 /* Card Layout Styles copied to Checkin Component */
 .event-card {
   background-color: var(--white);
-  border: 1px solid var(--light-grey);
+  border: none !important;
   border-radius: 12px;
   overflow: hidden;
   display: flex;

@@ -2501,54 +2501,65 @@ onMounted(() => {
   position: absolute;
   top: 8px;
   left: 8px;
-  background-color: var(--white);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 20px;
-  padding: 2px 6px;
+  padding: 3px 8px;
   font-size: 9px;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  gap: 4.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.2px;
 }
 
 .status-badge.live {
-  color: #16a34a;
+  color: #15803d;
+  background: rgba(240, 253, 244, 0.94);
+  border-color: rgba(187, 247, 208, 0.8);
 }
 
 .status-badge.live .status-dot {
-  background-color: #16a34a;
-  animation: live-dot-blink 1s infinite alternate;
+  background-color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+  animation: live-dot-blink 1.2s infinite ease-in-out;
 }
 
 @keyframes live-dot-blink {
-  0% {
-    opacity: 0.3;
-    transform: scale(0.9);
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.85);
   }
-  100% {
+  50% {
     opacity: 1;
-    transform: scale(1.1);
+    transform: scale(1.15);
   }
 }
 
 .status-badge.upcoming {
-  color: #ea580c;
-  padding: 2px 6px;
-  font-size: 8.5px;
+  color: #c2410c;
+  background: rgba(255, 247, 237, 0.94);
+  border-color: rgba(254, 215, 170, 0.8);
+  padding: 3px 8px;
+  font-size: 9px;
 }
 
 .status-badge.upcoming .status-dot {
-  background-color: #ea580c;
-  width: 4px;
-  height: 4px;
+  background-color: #f97316;
+  width: 5px;
+  height: 5px;
+  box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 .card-info {

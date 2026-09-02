@@ -602,15 +602,19 @@ const closeTicketModal = () => {
   position: absolute;
   top: 8px;
   left: 8px;
-  background-color: #ffffff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 20px;
-  padding: 2px 6px;
+  padding: 3px 8px;
   font-size: 9px;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  gap: 4.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.2px;
   color: #0f172a;
 }
 
@@ -619,35 +623,53 @@ const closeTicketModal = () => {
   height: 5px;
   border-radius: 50%;
   display: inline-block;
-  background-color: #10b981;
+  flex-shrink: 0;
 }
 
-.status-badge.live { color: #16a34a; }
+.status-badge.live {
+  color: #15803d;
+  background: rgba(240, 253, 244, 0.94);
+  border-color: rgba(187, 247, 208, 0.8);
+}
+
 .status-badge.live .status-dot {
-  background-color: #16a34a;
-  animation: live-dot-blink 1s infinite alternate;
+  background-color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+  animation: live-dot-blink 1.2s infinite ease-in-out;
 }
 
 @keyframes live-dot-blink {
-  0% { opacity: 0.3; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1.1); }
+  0%, 100% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
 
 .status-badge.upcoming {
-  color: #ea580c;
-  padding: 2px 6px;
-  font-size: 8.5px;
+  color: #c2410c;
+  background: rgba(255, 247, 237, 0.94);
+  border-color: rgba(254, 215, 170, 0.8);
+  padding: 3px 8px;
+  font-size: 9px;
 }
+
 .status-badge.upcoming .status-dot {
-  background-color: #ea580c;
-  width: 4px;
-  height: 4px;
+  background-color: #f97316;
+  width: 5px;
+  height: 5px;
+  box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
 }
 
-.status-badge.draft { color: #d97706; }
-.status-badge.draft .status-dot { background-color: #d97706; }
+.status-badge.draft {
+  color: #b45309;
+  background: rgba(254, 252, 232, 0.94);
+  border-color: rgba(254, 240, 138, 0.8);
+}
+.status-badge.draft .status-dot { background-color: #f59e0b; }
 
-.status-badge.ended { color: #64748b; }
+.status-badge.ended {
+  color: #475569;
+  background: rgba(241, 245, 249, 0.94);
+  border-color: rgba(226, 232, 240, 0.8);
+}
 .status-badge.ended .status-dot { background-color: #64748b; }
 
 .card-info {
@@ -807,30 +829,7 @@ const closeTicketModal = () => {
   fill: #2196F3;
 }
 
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.meta-icon {
-  width: 16px;
-  height: 16px;
-  color: #194e9e;
-  flex-shrink: 0;
-}
-
-.meta-text-wrapper {
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.meta-text.static {
-  font-size: 12px;
-  color: #000000;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* CLEAN META STYLING */
 
 .price-row {
   margin-top: 4px;
