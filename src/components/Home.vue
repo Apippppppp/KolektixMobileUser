@@ -946,7 +946,7 @@ onMounted(() => {
 
           <section class="cards-list-section">
             <div 
-              v-for="event in events" 
+              v-for="event in events.filter(e => e.status !== 'Draft')" 
               :key="event.id" 
               class="event-card"
               @click="handleSelectEvent(event)"
