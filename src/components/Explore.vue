@@ -240,11 +240,11 @@ const filteredEvents = computed(() => {
 }
 
 .explore-card {
-  background-color: #ffffff;
-  border-radius: 10px;
-  overflow: hidden;
+  background-color: transparent;
+  border-radius: 0;
+  overflow: visible;
   border: none !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   cursor: pointer;

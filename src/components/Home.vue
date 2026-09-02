@@ -2150,12 +2150,19 @@ onMounted(() => {
 .coming-soon-card {
   width: 100% !important;
   margin: 0;
+  background-color: #ffffff !important;
   border-radius: 8px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
 }
 
 .coming-soon-card .card-thumbnail-wrapper {
   height: 85px !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.coming-soon-card .event-thumbnail {
+  border-radius: 8px 8px 0 0 !important;
 }
 
 .coming-soon-card .card-info {
@@ -2470,13 +2477,13 @@ onMounted(() => {
 }
 
 .event-card {
-  background-color: #ffffff;
+  background-color: transparent;
   border: none !important;
-  border-radius: 10px;
-  overflow: hidden;
+  border-radius: 0;
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   flex: 0 0 250px;
   width: 250px;
 }

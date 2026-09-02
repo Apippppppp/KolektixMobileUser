@@ -559,13 +559,13 @@ const closeTicketModal = () => {
 .home-card-style {
   flex: 0 0 250px;
   width: 250px;
-  background-color: #ffffff;
+  background-color: transparent;
   border: none !important;
-  border-radius: 10px;
-  overflow: hidden;
+  border-radius: 0;
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   cursor: pointer;
   touch-action: pan-x pan-y;
   -webkit-tap-highlight-color: transparent;
