@@ -85,38 +85,6 @@ const closeTicketModal = () => {
 
 <template>
   <div class="kolektix-event-page">
-    <!-- TOP EVENT NAV TABS -->
-    <div class="event-nav-tabs">
-      <button 
-        class="tab-btn" 
-        :class="{ active: currentFilter === 'semua' }" 
-        @click="currentFilter = 'semua'"
-      >
-        Semua Event
-      </button>
-      <button 
-        class="tab-btn" 
-        :class="{ active: currentFilter === 'aktif' }" 
-        @click="currentFilter = 'aktif'"
-      >
-        Event Aktif
-      </button>
-      <button 
-        class="tab-btn" 
-        :class="{ active: currentFilter === 'draf' }" 
-        @click="currentFilter = 'draf'"
-      >
-        Event Draf
-      </button>
-      <button 
-        class="tab-btn" 
-        :class="{ active: currentFilter === 'lalu' }" 
-        @click="currentFilter = 'lalu'"
-      >
-        Event Lalu
-      </button>
-    </div>
-
     <!-- CATEGORIES SCROLL CHIPS -->
     <div class="category-pills-bar">
       <div class="pills-scroll-row">
@@ -175,45 +143,41 @@ const closeTicketModal = () => {
             <!-- Card Info Area -->
             <div class="card-info">
               <div class="event-title-wrapper">
-                <h3 class="event-card-title static">{{ event.title }}</h3>
-              </div>
-
-              <!-- Creator Profile & Verified Badge Row -->
-              <div class="creator-profile-row">
-                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
-                <span class="creator-name">{{ event.organizer }}</span>
-                <span class="verified-badge">
-                  <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                </span>
-              </div>
-
-              <!-- Location Row -->
-              <div class="meta-row" v-if="event.location">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                  <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
-                </svg>
-                <div class="meta-text-wrapper">
-                  <span class="meta-text static">{{ event.location }}</span>
+                <div v-if="event.title && event.title.length > 22" class="event-title-marquee">
+                  <h3 class="event-card-title">{{ event.title }}</h3>
+                  <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
                 </div>
+                <h3 v-else class="event-card-title static">{{ event.title }}</h3>
               </div>
 
-              <!-- Date Row -->
-              <div class="meta-row" v-if="event.date">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                  <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
-                </svg>
-                <div class="meta-text-wrapper">
-                  <span class="meta-text static">{{ event.date }}</span>
-                </div>
+              <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
+              <div class="meta-combined-row">
+                <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
               </div>
 
-              <!-- Price Row -->
-              <div class="price-row">
+              <!-- Price Row above creator (Aligned Right) -->
+              <div class="card-price-top-row">
                 <span class="event-card-price">{{ event.price }}</span>
               </div>
 
+              <!-- Divider line between Price and Creator -->
+              <div class="card-middle-divider"></div>
+
+              <!-- Creator Profile Row below Divider -->
+              <div class="creator-profile-row">
+                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                <div class="creator-text-wrap">
+                  <span class="creator-by-label">Diselenggarakan oleh:</span>
+                  <div class="creator-name-with-badge">
+                    <span class="creator-name">{{ event.organizer }}</span>
+                    <span class="verified-badge">
+                      <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -261,45 +225,41 @@ const closeTicketModal = () => {
             <!-- Card Info Area -->
             <div class="card-info">
               <div class="event-title-wrapper">
-                <h3 class="event-card-title static">{{ event.title }}</h3>
-              </div>
-
-              <!-- Creator Profile & Verified Badge Row -->
-              <div class="creator-profile-row">
-                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
-                <span class="creator-name">{{ event.organizer }}</span>
-                <span class="verified-badge">
-                  <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                </span>
-              </div>
-
-              <!-- Location Row -->
-              <div class="meta-row" v-if="event.location">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                  <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
-                </svg>
-                <div class="meta-text-wrapper">
-                  <span class="meta-text static">{{ event.location }}</span>
+                <div v-if="event.title && event.title.length > 22" class="event-title-marquee">
+                  <h3 class="event-card-title">{{ event.title }}</h3>
+                  <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
                 </div>
+                <h3 v-else class="event-card-title static">{{ event.title }}</h3>
               </div>
 
-              <!-- Date Row -->
-              <div class="meta-row" v-if="event.date">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                  <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
-                </svg>
-                <div class="meta-text-wrapper">
-                  <span class="meta-text static">{{ event.date }}</span>
-                </div>
+              <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
+              <div class="meta-combined-row">
+                <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
               </div>
 
-              <!-- Price Row -->
-              <div class="price-row">
+              <!-- Price Row above creator (Aligned Right) -->
+              <div class="card-price-top-row">
                 <span class="event-card-price">{{ event.price }}</span>
               </div>
 
+              <!-- Divider line between Price and Creator -->
+              <div class="card-middle-divider"></div>
+
+              <!-- Creator Profile Row below Divider -->
+              <div class="creator-profile-row">
+                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                <div class="creator-text-wrap">
+                  <span class="creator-by-label">Diselenggarakan oleh:</span>
+                  <div class="creator-name-with-badge">
+                    <span class="creator-name">{{ event.organizer }}</span>
+                    <span class="verified-badge">
+                      <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -345,45 +305,41 @@ const closeTicketModal = () => {
             <!-- Card Info Area -->
             <div class="card-info">
               <div class="event-title-wrapper">
-                <h3 class="event-card-title static">{{ event.title }}</h3>
-              </div>
-
-              <!-- Creator Profile & Verified Badge Row -->
-              <div class="creator-profile-row">
-                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
-                <span class="creator-name">{{ event.organizer }}</span>
-                <span class="verified-badge">
-                  <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                </span>
-              </div>
-
-              <!-- Location Row -->
-              <div class="meta-row" v-if="event.location">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                  <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
-                </svg>
-                <div class="meta-text-wrapper">
-                  <span class="meta-text static">{{ event.location }}</span>
+                <div v-if="event.title && event.title.length > 22" class="event-title-marquee">
+                  <h3 class="event-card-title">{{ event.title }}</h3>
+                  <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
                 </div>
+                <h3 v-else class="event-card-title static">{{ event.title }}</h3>
               </div>
 
-              <!-- Date Row -->
-              <div class="meta-row" v-if="event.date">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                  <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
-                </svg>
-                <div class="meta-text-wrapper">
-                  <span class="meta-text static">{{ event.date }}</span>
-                </div>
+              <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
+              <div class="meta-combined-row">
+                <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
               </div>
 
-              <!-- Price Row -->
-              <div class="price-row">
+              <!-- Price Row above creator (Aligned Right) -->
+              <div class="card-price-top-row">
                 <span class="event-card-price">{{ event.price }}</span>
               </div>
 
+              <!-- Divider line between Price and Creator -->
+              <div class="card-middle-divider"></div>
+
+              <!-- Creator Profile Row below Divider -->
+              <div class="creator-profile-row">
+                <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                <div class="creator-text-wrap">
+                  <span class="creator-by-label">Diselenggarakan oleh:</span>
+                  <div class="creator-name-with-badge">
+                    <span class="creator-name">{{ event.organizer }}</span>
+                    <span class="verified-badge">
+                      <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -416,57 +372,9 @@ const closeTicketModal = () => {
   display: flex;
   flex-direction: column;
   width: 100%;
-  background-color: #ffffff;
+  background-color: #ffffff !important;
   font-family: 'Poppins', sans-serif;
   min-height: 100%;
-}
-
-/* TOP EVENT NAV TABS */
-.event-nav-tabs {
-  display: flex;
-  border-bottom: 1px solid #e2e8f0;
-  width: 100%;
-  padding: 0 12px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: #ffffff;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.event-nav-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.tab-btn {
-  flex: 0 0 auto;
-  background: none;
-  border: none;
-  padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  position: relative;
-  transition: color 0.2s ease;
-  white-space: nowrap;
-}
-
-.tab-btn.active {
-  color: #194e9e;
-  font-weight: 600;
-}
-
-.tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background-color: #194e9e;
-  border-radius: 3px 3px 0 0;
 }
 
 /* CATEGORIES PILLS BAR */
@@ -474,6 +382,9 @@ const closeTicketModal = () => {
   background-color: #ffffff;
   padding: 12px 16px;
   border-bottom: 1px solid #f1f5f9;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .pills-scroll-row {
@@ -517,6 +428,7 @@ const closeTicketModal = () => {
   gap: 20px;
   padding: 16px 0 110px 0;
   touch-action: pan-y;
+  background-color: #ffffff !important;
 }
 
 .home-section-group {
@@ -631,7 +543,7 @@ const closeTicketModal = () => {
 .events-horizontal-row {
   display: flex;
   flex-wrap: nowrap;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
   padding: 4px 16px 12px 16px;
   scrollbar-width: none;
@@ -645,15 +557,15 @@ const closeTicketModal = () => {
 
 /* EXACT HOME PAGE EVENT CARD STYLING */
 .home-card-style {
-  flex: 0 0 255px;
-  width: 255px;
+  flex: 0 0 250px;
+  width: 250px;
   background-color: #ffffff;
-  border: 1px solid #f1f5f9;
-  border-radius: 12px;
+  border: none !important;
+  border-radius: 10px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   touch-action: pan-x pan-y;
   -webkit-tap-highlight-color: transparent;
@@ -669,9 +581,11 @@ const closeTicketModal = () => {
 .card-thumbnail-wrapper {
   position: relative;
   width: 100%;
-  height: 140px;
+  height: 110px;
   background-color: #f1f5f9;
   pointer-events: none;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .event-thumbnail {
@@ -681,27 +595,28 @@ const closeTicketModal = () => {
   pointer-events: none;
   -webkit-user-drag: none;
   user-select: none;
+  border-radius: 6px;
 }
 
 .status-badge {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 8px;
+  left: 8px;
   background-color: #ffffff;
   border-radius: 20px;
-  padding: 3px 8px;
-  font-size: 10px;
+  padding: 2px 6px;
+  font-size: 9px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  gap: 3px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
   color: #0f172a;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   display: inline-block;
   background-color: #10b981;
@@ -718,8 +633,16 @@ const closeTicketModal = () => {
   100% { opacity: 1; transform: scale(1.1); }
 }
 
-.status-badge.upcoming { color: #ea580c; }
-.status-badge.upcoming .status-dot { background-color: #ea580c; }
+.status-badge.upcoming {
+  color: #ea580c;
+  padding: 2px 6px;
+  font-size: 8.5px;
+}
+.status-badge.upcoming .status-dot {
+  background-color: #ea580c;
+  width: 4px;
+  height: 4px;
+}
 
 .status-badge.draft { color: #d97706; }
 .status-badge.draft .status-dot { background-color: #d97706; }
@@ -728,7 +651,7 @@ const closeTicketModal = () => {
 .status-badge.ended .status-dot { background-color: #64748b; }
 
 .card-info {
-  padding: 12px;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -741,15 +664,104 @@ const closeTicketModal = () => {
   white-space: nowrap;
 }
 
-.event-card-title.static {
-  font-size: 14.5px;
-  font-weight: 700;
+.event-title-marquee {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: cardTitleMarquee 12s linear infinite;
+  will-change: transform;
+}
+
+.event-card-title {
+  font-size: 13.5px;
+  font-weight: 600; /* Slightly increased bold */
   color: #0f172a;
-  line-height: 1.4;
+  line-height: 1.3;
   margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 32px;
+}
+
+.event-card-title.static {
+  padding-right: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@keyframes cardTitleMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.creator-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  overflow: hidden;
+}
+
+.creator-by-label {
+  font-size: 9px;
+  font-weight: 400; /* Non-bold */
+  color: #494a4a;
   white-space: nowrap;
+  line-height: 1.1;
+}
+
+.creator-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #151416;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.meta-combined-row {
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+  margin-bottom: 4px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.meta-inline-text {
+  font-size: 11px;
+  font-weight: 400;
+  color: #494a4a; /* Updated grey color */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-price-top-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 2px;
+  width: 100%;
+}
+
+.card-middle-divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 6px 0 4px 0;
+  width: 100%;
+}
+
+.card-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  width: 100%;
 }
 
 .creator-profile-row {
@@ -759,30 +771,40 @@ const closeTicketModal = () => {
 }
 
 .creator-avatar {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
 }
 
+.creator-name-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .creator-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  color: #000000;
+  color: #151416;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .verified-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  color: #2196F3;
+  flex-shrink: 0;
 }
 
 .verified-check-svg {
-  width: 14px;
-  height: 14px;
-  fill: #194e9e;
+  width: 12px;
+  height: 12px;
+  fill: #2196F3;
 }
 
 .meta-row {
@@ -815,9 +837,9 @@ const closeTicketModal = () => {
 }
 
 .event-card-price {
-  font-size: 15px;
-  font-weight: 700;
-  color: #000000;
+  font-size: 12.5px;
+  font-weight: 600; /* Slightly increased bold price */
+  color: #151416;
 }
 
 /* EMPTY STATE */

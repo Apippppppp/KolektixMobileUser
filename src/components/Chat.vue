@@ -1,5 +1,12 @@
 <script setup>
-import { ref, nextTick, computed } from 'vue';
+import { ref, nextTick, computed, onMounted } from 'vue';
+
+const props = defineProps({
+  initialChatId: {
+    type: [Number, String],
+    default: null
+  }
+});
 
 const emit = defineEmits(['room-toggle']);
 
@@ -207,6 +214,17 @@ const closeChatRoom = () => {
   document.body.classList.remove('chat-room-open');
   emit('room-toggle', false);
 };
+
+onMounted(() => {
+  if (props.initialChatId) {
+    const targetChat = chats.value.find(c => c.id === props.initialChatId || c.name.toLowerCase().includes(String(props.initialChatId).toLowerCase()));
+    if (targetChat) {
+      openChatRoom(targetChat);
+    } else if (chats.value.length > 1) {
+      openChatRoom(chats.value[1]); // Default Maxpaincompany LTD
+    }
+  }
+});
 
 const scrollToBottom = () => {
   nextTick(() => {

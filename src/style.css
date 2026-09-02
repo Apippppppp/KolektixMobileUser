@@ -15,7 +15,7 @@
   --primary-light-800: #0d3e91;
 
   --white: #FFFFFF;
-  --dark: #000000;
+  --dark: #151416;
   --grey: #8f8f8f;
   --dark-grey: #666666;
   --light-grey: #e4e4e7;
@@ -66,4 +66,13 @@ body.chat-room-open, html.chat-room-open {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+@keyframes cardTitleMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }

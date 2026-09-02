@@ -79,20 +79,40 @@ const filteredEvents = computed(() => {
 
           <div class="explore-card-body">
             <div class="event-title-wrapper">
-              <div v-if="event.title && event.title.length > 18" class="event-title-marquee">
+              <div v-if="event.title && event.title.length > 22" class="event-title-marquee">
                 <h4 class="explore-event-title">{{ event.title }}</h4>
                 <h4 class="explore-event-title" aria-hidden="true">{{ event.title }}</h4>
               </div>
               <h4 v-else class="explore-event-title static">{{ event.title }}</h4>
             </div>
-            <span class="explore-organizer">{{ event.organizer }}</span>
-            <div class="explore-meta-row">
-              <span class="meta-item">📍 {{ event.location || 'Jakarta' }}</span>
-              <span class="meta-item">📅 {{ event.date || 'TBA' }}</span>
+
+            <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
+            <div class="meta-combined-row">
+              <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
             </div>
-            <div class="explore-price-row">
-              <span class="price-val">{{ event.price }}</span>
-              <button class="buy-btn">Beli Tiket</button>
+
+            <!-- Price Row above creator (Aligned Right) -->
+            <div class="card-price-top-row">
+              <span class="event-card-price">{{ event.price || 'Gratis' }}</span>
+            </div>
+
+            <!-- Divider line between Price and Creator -->
+            <div class="card-middle-divider"></div>
+            
+            <!-- Creator Profile Row below Divider -->
+            <div class="creator-profile-row">
+              <img :src="event.creatorLogo || '/media/promodesign.png'" alt="Creator Profile" class="creator-avatar" />
+              <div class="creator-text-wrap">
+                <span class="creator-by-label">Diselenggarakan oleh:</span>
+                <div class="creator-name-with-badge">
+                  <span class="creator-name">{{ event.organizer }}</span>
+                  <span class="verified-badge">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -215,15 +235,15 @@ const filteredEvents = computed(() => {
 
 .events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 10px;
 }
 
 .explore-card {
   background-color: #ffffff;
-  border-radius: 14px;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #f1f5f9;
+  border: none !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
@@ -234,12 +254,15 @@ const filteredEvents = computed(() => {
   position: relative;
   width: 100%;
   height: 105px;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .explore-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 6px;
 }
 
 .status-tag {
@@ -260,7 +283,7 @@ const filteredEvents = computed(() => {
 }
 
 .explore-card-body {
-  padding: 10px;
+  padding: 8px 4px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -283,8 +306,8 @@ const filteredEvents = computed(() => {
 }
 
 .explore-event-title {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600; /* Slightly increased bold */
   color: #0f172a;
   margin: 0;
   white-space: nowrap;
@@ -298,30 +321,100 @@ const filteredEvents = computed(() => {
   text-overflow: ellipsis;
 }
 
-@keyframes cardTitleMarquee {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-50%, 0, 0); }
-}
-
-.explore-organizer {
-  font-size: 10px;
-  color: #64748b;
-}
-
-.explore-meta-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 9px;
-  color: #94a3b8;
-  margin-top: 2px;
-}
-
-.explore-price-row {
+.meta-combined-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 6px;
+  margin-top: 1px;
+  margin-bottom: 2px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.meta-inline-text {
+  font-size: 10px;
+  font-weight: 400;
+  color: #494a4a; /* Updated grey color */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-price-top-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 2px;
+  width: 100%;
+}
+
+.event-card-price {
+  font-size: 11px;
+  font-weight: 600;
+  color: #151416;
+}
+
+.card-middle-divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 5px 0 4px 0;
+  width: 100%;
+}
+
+.creator-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.creator-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.creator-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  overflow: hidden;
+}
+
+.creator-by-label {
+  font-size: 8px;
+  font-weight: 400;
+  color: #494a4a;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.creator-name-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.creator-name {
+  font-size: 10px;
+  font-weight: 500;
+  color: #151416;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2196F3;
+  flex-shrink: 0;
+}
+
+.verified-check-svg {
+  width: 11px;
+  height: 11px;
 }
 
 .price-val {

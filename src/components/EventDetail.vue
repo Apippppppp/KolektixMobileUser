@@ -21,19 +21,70 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back']);
+const emit = defineEmits(['back', 'navigate-chat', 'buy-ticket']);
 
-const activeSubTab = ref('Tiket');
-const tabs = ['Deskripsi', 'Tiket', 'Transaksi', 'Invitation', 'Penjualan', 'Syarat & Ketentuan'];
+const handleContactOrganizer = () => {
+  emit('navigate-chat', props.event);
+};
+
+const activeSubTab = ref('Deskripsi');
+const tabs = ['Deskripsi', 'Tiket', 'Syarat & Ketentuan'];
+
+// Selected ticket quantities map: { ticketId: count }
+const selectedTickets = ref({});
+const isPriceDetailExpanded = ref(false);
+const isOrderSummaryEditing = ref(false);
+
+const totalTicketCount = computed(() => {
+  return Object.values(selectedTickets.value).reduce((sum, qty) => sum + (qty || 0), 0);
+});
+
+const calculatedTotalPrice = computed(() => {
+  let total = 0;
+  tickets.value.forEach(t => {
+    const qty = selectedTickets.value[t.id] || 0;
+    total += qty * t.price;
+  });
+  return total;
+});
+
+const removeSingleTicket = (ticketId) => {
+  if (selectedTickets.value[ticketId]) {
+    delete selectedTickets.value[ticketId];
+  }
+};
+
+const clearAllSelectedTickets = () => {
+  selectedTickets.value = {};
+};
+
+// Track accordion expanded ticket IDs
+const expandedTicketIds = ref([1]); // default open first ticket
+
+const toggleTicketAccordion = (id) => {
+  const index = expandedTicketIds.value.indexOf(id);
+  if (index > -1) {
+    expandedTicketIds.value.splice(index, 1);
+  } else {
+    expandedTicketIds.value.push(id);
+  }
+};
 
 const tickets = ref([
   {
     id: 1,
-    name: 'Early Bird',
-    price: 150000,
+    name: 'Seat A',
+    price: 11500,
     sold: 50,
     quota: 100,
-    status: 'active'
+    status: 'active',
+    salesStatus: 'Penjualan Berlangsung',
+    eventDate: 'Sun, 17 May 2026',
+    validUntil: '17 May 2026',
+    endDate: '31 Dec 2029, 12:58:57 AM',
+    refund: false,
+    instantConfirm: true,
+    taxIncluded: true
   },
   {
     id: 2,
@@ -41,7 +92,14 @@ const tickets = ref([
     price: 200000,
     sold: 30,
     quota: 50,
-    status: 'active'
+    status: 'active',
+    salesStatus: 'Penjualan Berlangsung',
+    eventDate: 'Sun, 17 May 2026',
+    validUntil: '17 May 2026',
+    endDate: '31 Dec 2029, 12:58:57 AM',
+    refund: false,
+    instantConfirm: true,
+    taxIncluded: true
   },
   {
     id: 3,
@@ -49,7 +107,14 @@ const tickets = ref([
     price: 500000,
     sold: 24,
     quota: 24,
-    status: 'soldout'
+    status: 'soldout',
+    salesStatus: 'Penjualan Berakhir',
+    eventDate: 'Sun, 17 May 2026',
+    validUntil: '17 May 2026',
+    endDate: '31 Dec 2029, 12:58:57 AM',
+    refund: false,
+    instantConfirm: true,
+    taxIncluded: true
   }
 ]);
 
@@ -119,6 +184,7 @@ const isAddingInvitation = ref(false);
 // Bottom Sheet State for Details
 const activeDetailInvite = ref(null);
 const activeDetailSale = ref(null);
+const isPriceSummarySheetOpen = ref(false);
 const sheetY = ref(0);
 const isDragging = ref(false);
 let startY = 0;
@@ -143,8 +209,14 @@ const closeDetailSaleSheet = () => {
   sheetY.value = 0;
 };
 
-watch([activeDetailInvite, activeDetailSale], ([newInvite, newSale]) => {
-  if (newInvite || newSale) {
+const closePriceSummarySheet = () => {
+  isPriceSummarySheetOpen.value = false;
+  isOrderSummaryEditing.value = false;
+  sheetY.value = 0;
+};
+
+watch([activeDetailInvite, activeDetailSale, isPriceSummarySheetOpen], ([newInvite, newSale, newSummary]) => {
+  if (newInvite || newSale || newSummary) {
     document.body.style.overflow = 'hidden';
   } else {
     document.body.style.overflow = '';
@@ -169,6 +241,7 @@ const startDrag = (event) => {
     if (sheetY.value > 80) {
       closeDetailSheet();
       closeDetailSaleSheet();
+      closePriceSummarySheet();
     } else {
       sheetY.value = 0;
     }
@@ -476,18 +549,36 @@ const handleAddTicket = () => {
   alert('Tambah Jenis Tiket sedang dikembangkan');
 };
 
+const isScrolled = ref(false);
+
+const handleContentScroll = (e) => {
+  if (e && e.target) {
+    isScrolled.value = e.target.scrollTop > 80;
+  }
+};
+
 const isMenuOpen = ref(false);
+const showCopyToast = ref(false);
+let toastTimer = null;
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value;
 };
 
 const handleShare = () => {
-  const dummyUrl = window.location.href + `/event/${props.event.id}`;
+  const dummyUrl = window.location.origin + `/event/${props.event.id}`;
   navigator.clipboard.writeText(dummyUrl).then(() => {
-    alert(`Link event "${props.event.title}" berhasil disalin ke clipboard!`);
-  }).catch((err) => {
-    alert("Gagal menyalin link ke clipboard.");
+    showCopyToast.value = true;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      showCopyToast.value = false;
+    }, 2500);
+  }).catch(() => {
+    showCopyToast.value = true;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      showCopyToast.value = false;
+    }, 2500);
   });
   isMenuOpen.value = false;
 };
@@ -496,84 +587,89 @@ const handleChat = () => {
   alert(`Membuka room chat dengan Penyelenggara: ${props.event.organizer}`);
   isMenuOpen.value = false;
 };
+
+const openLocationMaps = () => {
+  const locName = props.event.location || 'Cornerstone Bandung';
+  const query = encodeURIComponent(locName);
+  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+};
 </script>
 
 <template>
   <div class="event-detail-page">
-    <!-- Header Top Bar -->
-    <div class="detail-header">
+    <!-- Header Top Bar (Slightly Larger Height & Padding) -->
+    <div class="detail-header" :class="{ 'scrolled-header': isScrolled }">
       <button class="back-btn" @click="emit('back')">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="header-icon">
+        <!-- Blue Back Arrow Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="#194e9e" class="header-icon">
           <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
         </svg>
       </button>
-      <h1 class="header-title">Detail Event</h1>
+
+      <!-- Default Header Title -->
+      <div v-if="!isScrolled" class="header-title-container">
+        <h1 class="header-title">Detail Event</h1>
+      </div>
+
+      <!-- Scrolled Header Title & Meta -->
+      <div v-else class="header-scrolled-info">
+        <h2 class="scrolled-event-title">{{ event.title }}</h2>
+        <span class="scrolled-event-meta">{{ event.date || '14 Nov \'26' }} • {{ event.location || 'Jawa Barat' }}</span>
+      </div>
+
       <div class="header-actions">
-        <button class="action-btn" @click="toggleMenu">
-          <!-- Three Dots Vert -->
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="header-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+        <button class="action-btn" @click="handleShare" title="Bagikan">
+          <!-- Clean & Beautiful Blue Share/Export Icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="#194e9e" class="header-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15" />
           </svg>
         </button>
-
-        <!-- Dropdown Menu / Accordion-style Card -->
-        <transition name="dropdown-slide">
-          <div v-if="isMenuOpen" class="header-dropdown-menu">
-            <button class="dropdown-item" @click="handleShare">
-              <!-- Share Icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="dropdown-icon">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186.002-.003.001-.002a2.25 2.25 0 0 1 3.869-1.92l5.064 2.53m-8.933 1.395 5.064 2.53m1.866-1.395a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm0-11.25a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
-              </svg>
-              <span>Bagikan (Share)</span>
-            </button>
-            <div class="dropdown-divider"></div>
-            <button class="dropdown-item" @click="handleChat">
-              <!-- Chat/Message Icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="dropdown-icon">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-3.658A7.952 7.952 0 0 1 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
-              </svg>
-              <span>Hubungi Penyelenggara (Chat)</span>
-            </button>
-          </div>
-        </transition>
       </div>
     </div>
 
+    <!-- Aesthetic Copy Link Toast Notification -->
+    <transition name="toast-fade">
+      <div v-if="showCopyToast" class="share-copy-toast">
+        <div class="toast-icon-circle">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" style="width: 13px; height: 13px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+        </div>
+        <span class="toast-message-text">Tautan event berhasil disalin</span>
+      </div>
+    </transition>
+
     <!-- Scrollable content -->
-    <div class="detail-content">
+    <div class="detail-content" @scroll="handleContentScroll">
       <!-- Banner/Cover Image -->
       <div class="detail-banner-container">
         <!-- Overlay banner graphic matching exact screenshot background styles if possible -->
-        <div class="banner-gradient-overlay"></div>
+       
         <img :src="event.image" :alt="event.title" class="banner-img" />
-        <!-- Custom text display on banner as a fallback details decoration -->
-        <div class="banner-decor-text">
-          <div class="decor-main-title">NGAMEN</div>
-          <div class="decor-date-location">
-            <div class="decor-dates">
-              <span class="decor-number">16,</span>
-              <span class="decor-number">30,</span>
-            </div>
-            <div class="decor-details">
-              <div class="decor-month-year">august 2°26</div>
-              <div class="decor-cities">depok, jawa barat, karawang, tangerang...</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Overlapping Floating Summary Card -->
       <div class="floating-summary-card">
         <div class="card-title-row">
           <div class="event-title-wrapper">
-            <div class="event-title-marquee">
+            <!-- Marquee scrolling only if title length > 22 characters -->
+            <div v-if="(event.title + (event.id === 5 ? ' (R2C27)' : '')).length > 22" class="event-title-marquee">
               <span class="event-title-text">{{ event.title }}{{ event.id === 5 ? ' (R2C27)' : '' }}</span>
               <span class="marquee-spacer"></span>
               <span class="event-title-text" aria-hidden="true">{{ event.title }}{{ event.id === 5 ? ' (R2C27)' : '' }}</span>
               <span class="marquee-spacer"></span>
             </div>
+            
+            <!-- Static Clean Title Text when title is short -->
+            <h2 v-else class="event-title-text static-title">{{ event.title }}{{ event.id === 5 ? ' (R2C27)' : '' }}</h2>
           </div>
           <span class="status-badge live">LIVE</span>
+        </div>
+
+        <!-- Creator Profile Row (Black Text) -->
+        <div class="creator-profile-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <img :src="event.creatorLogo || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80'" alt="Creator Logo" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
+          <span style="font-size: 12px; font-weight: 600; color: #000000;">{{ event.organizer || 'Maxpaincompany LTD' }}</span>
         </div>
         
         <!-- Metadata rows matching exact layout -->
@@ -598,23 +694,21 @@ const handleChat = () => {
             <span class="meta-detail-text">{{ event.time || '13:00 WIB - 20:30 WIB' }}</span>
           </div>
           
-          <div class="meta-detail-row">
+          <div class="meta-detail-row clickable-location-row" @click="openLocationMaps" style="cursor: pointer;">
             <!-- Location Pin Icon -->
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="meta-detail-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
             </svg>
-            <span class="meta-detail-text">{{ event.id === 5 ? 'Cornerstone Bandung' : (event.location || 'Cornerstone Bandung') }}</span>
+            <span class="meta-detail-text" style="flex: 1; text-decoration: underline; text-underline-offset: 2px;">{{ event.id === 5 ? 'Cornerstone Bandung' : (event.location || 'Cornerstone Bandung') }}</span>
+            
+            <!-- Clickable Direct Maps Link Icon Button Only -->
+            <button class="gmaps-direct-btn" title="Buka Petunjuk Arah di Maps" style="background: #eff6ff; border: none; padding: 6px; border-radius: 50%; color: #194e9e; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.15s;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" style="width: 15px; height: 15px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 21 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </button>
           </div>
-        </div>
-
-        <div class="checkin-status-row">
-          <span class="status-label">Check-in Status</span>
-          <span class="status-count">{{ event.sold }}/{{ event.total }}</span>
-        </div>
-        <!-- Progress bar matching image styling -->
-        <div class="status-progress-bar">
-          <div class="progress-fill" :style="{ width: `${(event.sold / event.total) * 100}%` }"></div>
         </div>
       </div>
 
@@ -839,39 +933,140 @@ const handleChat = () => {
 
         </div>
 
-        <!-- Tiket Tab Content (matches image) -->
+        <!-- Tiket Tab Content (Matches screenshots 1 & 2) -->
         <div v-else-if="activeSubTab === 'Tiket'" class="ticket-list-container">
-          <div v-for="ticket in tickets" :key="ticket.id" class="ticket-type-card" :class="{ 'sold-out-card': ticket.status === 'soldout' }">
-            <div class="ticket-side-notch-left"></div>
-            <div class="ticket-side-notch-right"></div>
-            <div class="ticket-card-header">
-              <div class="ticket-info-left">
-                <h3 class="ticket-name">{{ ticket.name }}</h3>
-                <span class="ticket-price" :class="{ 'price-sold-out': ticket.status === 'soldout' }">
-                  {{ formatPrice(ticket.price) }}
-                </span>
+          <div 
+            v-for="ticket in tickets" 
+            :key="ticket.id" 
+            class="ticket-custom-card"
+            :class="{ 'is-expanded': expandedTicketIds.includes(ticket.id), 'is-sold-out': ticket.status === 'soldout' }"
+          >
+            <!-- Notch accents on side -->
+            <div class="ticket-notch notch-left"></div>
+            <div class="ticket-notch notch-right"></div>
+
+            <!-- Card Top Header (Title, Badge, Price, Accordion Chevron) -->
+            <div class="ticket-header-area">
+              <div class="ticket-header-left">
+                <h3 class="ticket-title-text">{{ ticket.name }}</h3>
+                <div class="sales-status-badge" :class="{ 'sales-ended': ticket.status === 'soldout' }">
+                  <span class="status-dot-mini"></span>
+                  <span>{{ ticket.salesStatus || 'PENJUALAN BERLANGSUNG' }}</span>
+                </div>
               </div>
-              <button class="ticket-edit-btn" @click="handleEditTicket(ticket)">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="edit-svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-              </button>
+
+              <!-- Price & Accordion Toggle Chevron (Right Side) -->
+              <div class="ticket-header-right" @click="toggleTicketAccordion(ticket.id)">
+                <div class="price-stack">
+                  <span class="price-label">Harga</span>
+                  <span class="price-value">{{ formatPrice(ticket.price) }}</span>
+                </div>
+                <button class="accordion-chevron-btn" title="Toggle Detail Tiket">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke-width="2.5" 
+                    stroke="currentColor" 
+                    class="chevron-svg-icon"
+                    :class="{ 'rotated': expandedTicketIds.includes(ticket.id) }"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            
-            <div class="ticket-card-divider"></div>
-            
-            <div class="ticket-card-footer">
-              <span class="sold-label">Terjual</span>
-              <span 
-                class="sold-count-badge" 
-                :class="ticket.status === 'soldout' ? 'sold-out-badge' : 'normal-badge'"
-              >
-                <span v-if="ticket.status === 'soldout'">{{ ticket.sold }}/{{ ticket.quota }} (Sold Out)</span>
-                <span v-else>{{ ticket.sold }}/{{ ticket.quota }}</span>
-              </span>
+
+            <!-- Accordion Expandable Details Section (Shown when expanded - Screenshot 2) -->
+            <transition name="accordion-expand">
+              <div v-if="expandedTicketIds.includes(ticket.id)" class="ticket-accordion-body">
+                <!-- Section 1: Tanggal Event -->
+                <div class="detail-section-block">
+                  <label class="section-block-label">Tanggal Event</label>
+                  <div class="date-chip-info">
+                    <div class="date-calendar-box">
+                      <span class="day-name">Sun</span>
+                      <span class="day-num">17</span>
+                      <span class="month-name">May</span>
+                    </div>
+                    <span class="validity-text">Masa berlaku: <strong>{{ ticket.validUntil || '17 May 2026' }}</strong></span>
+                  </div>
+                </div>
+
+                <div class="accordion-divider-line"></div>
+
+                <!-- Section 2: Informasi Tiket Chips -->
+                <div class="detail-section-block">
+                  <label class="section-block-label">Informasi Tiket</label>
+                  <div class="info-chips-row">
+                    <div class="info-chip">
+                      <!-- Simple Blue Info/Prohibition Icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" class="chip-svg-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                      </svg>
+                      <span>Tidak Bisa Refund</span>
+                    </div>
+
+                    <div class="info-chip">
+                      <!-- Simple Blue Check Circle Icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" class="chip-svg-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                      <span>Konfirmasi Instan</span>
+                    </div>
+
+                    <div class="info-chip">
+                      <!-- Simple Blue Tag/Tax Icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" class="chip-svg-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+                      </svg>
+                      <span>Termasuk Pajak 10%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </transition>
+
+            <div class="card-bottom-divider"></div>
+
+            <!-- Card Bottom Footer Area (Berakhir Pada & + Tambah / Stepper Button with Total Rp) -->
+            <div class="ticket-footer-area">
+              <div class="footer-left">
+                <span class="end-date-label">Berakhir Pada</span>
+                <span class="end-date-value">{{ ticket.endDate || '31 Dec 2029, 12:58:57 AM' }}</span>
+              </div>
+
+              <div class="footer-right">
+                <!-- + Tambah / Stepper Button -->
+                <div v-if="ticket.status !== 'soldout'">
+                  <button 
+                    v-if="!selectedTickets[ticket.id]" 
+                    class="btn-add-ticket-blue"
+                    @click="selectedTickets[ticket.id] = 1"
+                  >
+                    <span>+ Tambah</span>
+                  </button>
+
+                  <div v-else class="stepper-blue-control">
+                    <button 
+                      class="stepper-btn-minus"
+                      @click="selectedTickets[ticket.id] = Math.max(0, selectedTickets[ticket.id] - 1)"
+                    >-</button>
+                    <span class="stepper-count-num">{{ selectedTickets[ticket.id] }}</span>
+                    <button 
+                      class="stepper-btn-plus"
+                      @click="selectedTickets[ticket.id]++"
+                    >+</button>
+                  </div>
+                </div>
+
+                <div v-else class="sold-out-pill-btn">
+                  <span>Habis</span>
+                </div>
+              </div>
             </div>
           </div>
-
         </div>
 
         <!-- Invitation Tab Content -->
@@ -1214,71 +1409,186 @@ const handleChat = () => {
 
 
 
-    <!-- Fixed Bottom Bar for Editing Ticket -->
+    <!-- Bottom Sticky Action Bar (Matches Exact Screenshot) -->
     <transition name="slide-up" appear>
-      <div v-if="activeSubTab === 'Tiket' && editingTicket" class="ticket-form-actions-bar-fixed">
-        <button class="btn-cancel" @click="handleCancelEdit">Batal</button>
-        <button class="btn-save" @click="handleSaveTicket">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="save-icon-svg">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-12v12m9-12H7.5A1.5 1.5 0 0 0 6 7.5v9A1.5 1.5 0 0 0 7.5 18h9a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 16.5 6Z" />
-          </svg>
-          <span>Simpan Tiket</span>
-        </button>
+      <!-- Mode Tab Deskripsi / Syarat & Ketentuan -->
+      <div v-if="activeSubTab === 'Deskripsi' || activeSubTab === 'Syarat & Ketentuan'" class="ticket-form-actions-bar-fixed">
+        <div class="bottom-bar-top-row">
+          <div class="bottom-bar-price-info">
+            <span class="bottom-bar-label">Harga mulai dari</span>
+            <span class="bottom-bar-price-val">{{ event.price || 'Rp124.000' }}</span>
+          </div>
+        </div>
+        <div class="bottom-bar-btn-row">
+          <button class="btn-primary-blue-buy" @click="activeSubTab = 'Tiket'">
+            <span>Lihat Tiket</span>
+          </button>
+          <button class="btn-chat-bubble" @click="handleContactOrganizer" title="Chat Penyelenggara">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" class="chat-bubble-svg">
+              <path d="M4.913 2.658c2.075-.27 4.19-.408 6.337-.408 2.147 0 4.262.139 6.337.408 1.922.25 3.291 1.861 3.405 3.727a4.403 4.403 0 0 1-1.032 3.03l-2.062 2.378a.75.75 0 0 0-.17.476v1.396a.75.75 0 0 1-1.28.53l-2.316-2.316a.75.75 0 0 0-.53-.22H11.25a.75.75 0 0 1 0-1.5h2.553a2.25 2.25 0 0 1 1.591.659l1.106 1.106v-1.12c0-.62.247-1.214.688-1.653l2.062-2.378c.362-.418.572-.962.548-1.53-.081-1.328-1.074-2.453-2.434-2.63-1.954-.254-3.94-.385-5.957-.385-2.017 0-4.003.131-5.957.385-1.36.177-2.353 1.302-2.434 2.63-.024.568.186 1.112.548 1.53l2.062 2.378c.441.439.688 1.033.688 1.653v3.42c0 .621.504 1.125 1.125 1.125h.375a.75.75 0 0 1 0 1.5h-.375A2.625 2.625 0 0 1 6 18.375v-2.735a2.25 2.25 0 0 0-.51-1.428L3.428 11.83A4.403 4.403 0 0 1 2.396 8.8c.114-1.866 1.483-3.477 3.405-3.727Z" />
+              <circle cx="12" cy="11" r="1" />
+              <circle cx="8" cy="11" r="1" />
+              <circle cx="16" cy="11" r="1" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode Tab Tiket (Matches Exact User Screenshot) -->
+      <div v-else-if="activeSubTab === 'Tiket'" class="ticket-form-actions-bar-fixed">
+        <!-- Top Row: Price Stack + Pill Detail Button -->
+        <div class="bottom-bar-top-row">
+          <div class="bottom-bar-price-info">
+            <span class="bottom-bar-label">Total Harga</span>
+            <span class="bottom-bar-price-val">{{ totalTicketCount > 0 ? formatPrice(calculatedTotalPrice) : 'Rp 0' }}</span>
+          </div>
+
+          <button 
+            class="detail-toggle-pill-btn" 
+            @click="isPriceSummarySheetOpen = true"
+            title="Lihat Detail Total"
+          >
+            <span>({{ totalTicketCount }}) Detail</span>
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke-width="3" 
+              stroke="currentColor" 
+              class="pill-chevron-icon"
+              :class="{ 'rotated': isPriceSummarySheetOpen }"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Bottom Row: Primary Buy Button + Chat Bubble Button -->
+        <div class="bottom-bar-btn-row">
+          <button 
+            class="btn-primary-blue-buy" 
+            @click="totalTicketCount > 0 ? emit('buy-ticket', { selectedTickets, tickets }) : alert('Pilih minimal 1 tiket!')"
+          >
+            <span>Beli Tiket Sekarang</span>
+          </button>
+
+          <button class="btn-chat-bubble" @click="handleContactOrganizer" title="Chat Penyelenggara">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="chat-bubble-svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a.75.75 0 0 1-1.016-.944 4.194 4.194 0 0 0 .61-2.025A7.56 7.56 0 0 1 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </transition>
 
-    <!-- Fixed Bottom Bar for Adding Ticket -->
-    <transition name="slide-up" appear>
-      <div v-if="activeSubTab === 'Tiket' && !editingTicket" class="ticket-form-actions-bar-fixed">
-        <button class="btn-save-full" @click="handleAddTicket">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="plus-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          <span>Tambah Jenis Tiket</span>
-        </button>
-      </div>
-    </transition>
-    <!-- Fixed Bottom Bar for Invitation -->
-    <transition name="slide-up" appear>
-      <div v-if="activeSubTab === 'Invitation' && !editingInvitation" class="ticket-form-actions-bar-fixed">
-        <button class="btn-save-full" @click="handleCreateInvitation">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="plus-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          <span>Tambah Tiket Invitation</span>
-        </button>
-      </div>
-    </transition>
+    <!-- Bottom Sheet for Price Order Summary (Ringkasan Pesanan) -->
+    <transition name="sheet-fade">
+      <div v-if="isPriceSummarySheetOpen" class="bottom-sheet-backdrop" @click="closePriceSummarySheet" @touchmove.prevent>
+        <div 
+          class="bottom-sheet-content" 
+          :class="{ 'dragging': isDragging }"
+          :style="{ transform: `translateY(${sheetY}px)` }"
+          @click.stop
+        >
+          <!-- Drag Handle -->
+          <div class="bottom-sheet-drag-handle-area" @mousedown="startDrag" @touchstart="startDrag">
+            <div class="bottom-sheet-drag-handle"></div>
+          </div>
+          
+          <!-- Sheet Header with Edit/Selesai Icon Button & X Close Button -->
+          <div class="bottom-sheet-header" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px 10px; width: 100%; box-sizing: border-box; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 class="bottom-sheet-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #000000;">Ringkasan Pesanan</h3>
+              
+              <!-- Edit / Selesai Icon Button -->
+              <button 
+                v-if="totalTicketCount > 0" 
+                @click="isOrderSummaryEditing = !isOrderSummaryEditing" 
+                style="background: #eff6ff; color: #194e9e; border: none; padding: 5px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;"
+                :title="isOrderSummaryEditing ? 'Selesai Edit' : 'Edit Tiket'"
+              >
+                <!-- Pencil Edit Icon (When not editing) -->
+                <svg v-if="!isOrderSummaryEditing" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" style="width: 15px; height: 15px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                </svg>
+                
+                <!-- Clean Blue Checkmark Icon (When editing) -->
+                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="#194e9e" style="width: 15px; height: 15px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </button>
+            </div>
+            
+            <button @click="closePriceSummarySheet" style="background: #eff6ff; border: none; padding: 6px; border-radius: 50%; cursor: pointer; color: #194e9e; display: flex; align-items: center; justify-content: center; transition: all 0.15s;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="#194e9e" style="width: 16px; height: 16px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Sheet Body with Itemized Order Details -->
+          <div class="bottom-sheet-body" style="padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 14px;">
+            <div class="order-summary-list" style="display: flex; flex-direction: column; gap: 12px;">
+              <template v-for="(ticket, idx) in tickets" :key="ticket.id">
+                <div v-if="selectedTickets[ticket.id] > 0" class="summary-item-wrapper" style="display: flex; flex-direction: column; gap: 12px;">
+                  <div class="summary-item-row" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <!-- Blue Ticket Icon -->
+                      <div style="width: 32px; height: 32px; border-radius: 8px; background-color: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" style="width: 18px; height: 18px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-12v.75m0 3v.75m0 3v.75m0 3V18m-3-12h15a2.25 2.25 0 0 1 2.25 2.25v2.25a1.5 1.5 0 0 0 0 3v2.25A2.25 2.25 0 0 1 18.75 18H5.25A2.25 2.25 0 0 1 3 15.75V13.5a1.5 1.5 0 0 0 0-3V7.5A2.25 2.25 0 0 1 5.25 6Z" />
+                        </svg>
+                      </div>
 
-    <!-- Fixed Bottom Bar for Transaksi -->
-    <transition name="slide-up" appear>
-      <div v-if="activeSubTab === 'Transaksi'" class="ticket-form-actions-bar-fixed">
-        <button class="btn-save-full" @click="handleDownloadReport">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="plus-icon" style="width: 16px; height: 16px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          <span>Download Laporan</span>
-        </button>
-      </div>
-    </transition>
+                      <div style="display: flex; flex-direction: column; text-align: left;">
+                        <span style="font-size: 13px; font-weight: 600; color: #000000;">{{ ticket.name }}</span>
+                        <span style="font-size: 11px; color: #000000; font-weight: 400;">{{ selectedTickets[ticket.id] }} x {{ formatPrice(ticket.price) }}</span>
+                      </div>
+                    </div>
 
-    <!-- Fixed Bottom Bar for Editing Invitation -->
-    <transition name="slide-up" appear>
-      <div v-if="activeSubTab === 'Invitation' && editingInvitation" class="ticket-form-actions-bar-fixed" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 16px;">
-        <button class="btn-cancel" @click="handleCancelEditInvitation" style="flex: 1; background-color: #ffffff; color: #194e9e; border: 1.5px solid #194e9e; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; text-align: center; font-family: var(--font-sans);">Batal</button>
-        <button class="btn-save" @click="handleSaveInvitation" style="flex: 1.2; background-color: #194e9e; color: #ffffff; border: 1.5px solid #194e9e; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; text-align: center; font-family: var(--font-sans);">Simpan Perubahan</button>
-      </div>
-    </transition>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span style="font-size: 13px; font-weight: 700; color: #000000;">{{ formatPrice(selectedTickets[ticket.id] * ticket.price) }}</span>
+                      
+                      <!-- Per Item Delete Button (Only visible when Edit mode is active) -->
+                      <button 
+                        v-if="isOrderSummaryEditing" 
+                        @click="removeSingleTicket(ticket.id)" 
+                        style="background: #fee2e2; border: none; border-radius: 50%; padding: 5px; cursor: pointer; color: #ef4444; display: flex; align-items: center; justify-content: center; transition: all 0.15s;"
+                        title="Hapus Tiket Ini"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#ef4444" style="width: 14px; height: 14px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
 
-    <!-- Fixed Bottom Bar for Penjualan (Download Laporan) -->
-    <transition name="slide-up" appear>
-      <div v-if="activeSubTab === 'Penjualan' && !activeDetailSale" class="ticket-form-actions-bar-fixed">
-        <button class="btn-save-full" @click="handleDownloadReport">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="plus-icon" style="width: 16px; height: 16px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          <span>Download Laporan</span>
-        </button>
+                  <!-- Thin Divider Line Between Items -->
+                  <div style="height: 1px; background-color: #f1f5f9; width: 100%;"></div>
+                </div>
+              </template>
+
+              <!-- Beautiful & Clean Empty State Card -->
+              <div v-if="totalTicketCount === 0" style="padding: 24px 16px; text-align: center; background-color: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; margin: 4px 0;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; background-color: #eff6ff; display: flex; align-items: center; justify-content: center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="#194e9e" style="width: 22px; height: 22px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-12v.75m0 3v.75m0 3v.75m0 3V18m-3-12h15a2.25 2.25 0 0 1 2.25 2.25v2.25a1.5 1.5 0 0 0 0 3v2.25A2.25 2.25 0 0 1 18.75 18H5.25A2.25 2.25 0 0 1 3 15.75V13.5a1.5 1.5 0 0 0 0-3V7.5A2.25 2.25 0 0 1 5.25 6Z" />
+                  </svg>
+                </div>
+                <span style="font-size: 13px; font-weight: 600; color: #000000; margin-top: 2px;">Belum Ada Tiket Dipilih</span>
+                <span style="font-size: 11.5px; color: #64748b; font-weight: 400; line-height: 1.4; max-width: 220px;">Silakan pilih jumlah tiket pada pilihan kategori tiket di atas.</span>
+              </div>
+            </div>
+
+            <div style="height: 1px; background-color: #e2e8f0; margin: 2px 0;"></div>
+
+            <!-- Grand Total Row Only -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 14px; font-weight: 700; color: #000000;">Total Pembayaran</span>
+              <span style="font-size: 17px; font-weight: 800; color: #000000;">{{ formatPrice(calculatedTotalPrice) }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </transition>
 
@@ -1415,14 +1725,68 @@ const handleChat = () => {
 </template>
 
 <style scoped>
+/* Toast Notification styling using CSS Variables from style.css */
+.share-copy-toast {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background-color: var(--primary-base);
+  color: var(--white);
+  padding: 8px 16px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 18px rgba(25, 78, 158, 0.35);
+  border: 1px solid var(--primary-disabled);
+  pointer-events: none;
+}
+
+.toast-icon-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-icon-circle svg {
+  stroke: var(--primary-base);
+}
+
+.toast-message-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+.toast-fade-enter-active, .toast-fade-leave-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-fade-enter-from, .toast-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -10px) scale(0.95);
+}
+
 .event-detail-page {
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: 100%;
   height: 100%;
   background-color: #f8fafc;
   font-family: var(--font-sans);
   position: relative;
+  overflow-x: hidden !important;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 /* Header styling */
@@ -1430,18 +1794,22 @@ const handleChat = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background-color: #194e9e;
-  border-bottom: 1px solid #194e9e;
+  padding: 8px 16px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
   position: sticky;
   top: 0;
   z-index: 100;
-  height: 56px;
-  position: relative;
+  height: 52px;
+  box-sizing: border-box;
 }
 
-.back-btn {
-  background-color: #ffffff;
+.detail-header.scrolled-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.back-btn, .action-btn {
+  background: transparent;
   border: none;
   cursor: pointer;
   color: #194e9e;
@@ -1451,40 +1819,62 @@ const handleChat = () => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  transition: opacity 0.2s;
-}
-
-.action-btn {
-  background-color: #ffffff;
-  border: none;
-  cursor: pointer;
-  color: #194e9e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  transition: opacity 0.2s;
+  transition: background-color 0.2s;
+  padding: 0;
 }
 
 .back-btn:hover, .action-btn:hover {
-  opacity: 0.85;
+  background-color: #f1f5f9;
 }
 
 .header-icon {
   width: 20px;
   height: 20px;
+  stroke: #194e9e;
 }
 
-.header-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #ffffff;
+.header-title-container {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
   margin: 0;
+}
+
+.header-scrolled-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  flex: 1;
+  margin: 0 12px;
+  overflow: hidden;
+}
+
+.scrolled-event-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.scrolled-event-meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .header-actions {
@@ -1556,24 +1946,29 @@ const handleChat = () => {
 .detail-content {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 40px;
+  overflow-x: hidden !important;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  padding-bottom: 95px !important;
+  background-color: #ffffff;
 }
 
 /* Banner container */
 .detail-banner-container {
-  width: 100%;
-  height: 180px;
-  position: relative;
-  overflow: hidden;
-  background-color: #1e3a8a;
+  width: calc(100% - 24px) !important;
+  margin: 6px 12px 0 12px !important;
+  height: 105px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 
 .banner-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.35;
-  filter: blur(0.5px);
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 6px !important;
 }
 
 .banner-gradient-overlay {
@@ -1681,6 +2076,13 @@ const handleChat = () => {
   font-weight: 600;
   color: #000000;
   line-height: 1.3;
+}
+
+.event-title-text.static-title {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .marquee-spacer {
@@ -1806,16 +2208,397 @@ const handleChat = () => {
 
 /* Tab contents */
 .tab-pane-content {
-  padding: 8px 16px 16px 16px;
+  padding: 8px 16px 72px 16px;
 }
 
 .ticket-list-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-/* Ticket Card */
+/* Custom Ticket Card (Matches Screenshots 1 & 2) */
+.ticket-custom-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.ticket-custom-card.is-expanded {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.ticket-custom-card.is-sold-out {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  opacity: 0.75;
+}
+
+.ticket-custom-card.is-sold-out .ticket-header-area,
+.ticket-custom-card.is-sold-out .ticket-footer-area,
+.ticket-custom-card.is-sold-out .ticket-accordion-body {
+  background-color: #f1f5f9 !important;
+}
+
+.ticket-custom-card.is-sold-out .ticket-title-text,
+.ticket-custom-card.is-sold-out .price-value,
+.ticket-custom-card.is-sold-out .price-label,
+.ticket-custom-card.is-sold-out .validity-text,
+.ticket-custom-card.is-sold-out .end-date-value {
+  color: #94a3b8 !important;
+}
+
+.ticket-notch {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background-color: #f8fafc;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  box-shadow: inset 0 0 0 1px #cbd5e1;
+}
+
+.ticket-notch.notch-left {
+  left: -8px;
+}
+
+.ticket-notch.notch-right {
+  right: -8px;
+}
+
+/* Card Header Top Row */
+.ticket-header-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 22px;
+  background-color: #ffffff;
+}
+
+.ticket-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ticket-title-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sales-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #dcfce7;
+  color: #15803d;
+  font-size: 8.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: none;
+  letter-spacing: 0px;
+  width: fit-content;
+}
+
+.sales-status-badge.sales-ended {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-dot-mini {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #16a34a;
+}
+
+.sales-status-badge.sales-ended .status-dot-mini {
+  background-color: #dc2626;
+}
+
+.ticket-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding-left: 10px;
+  border-left: 1px solid #f1f5f9;
+}
+
+.price-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.price-label {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.price-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.accordion-chevron-btn {
+  background: none;
+  border: none;
+  color: #194e9e;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chevron-svg-icon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+}
+
+.chevron-svg-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* Accordion Body Content */
+.ticket-accordion-body {
+  padding: 20px 22px;
+  background-color: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-block-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+.date-chip-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-calendar-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  min-width: 42px;
+}
+
+.day-name {
+  font-size: 8px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.day-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.month-name {
+  font-size: 8px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.validity-text {
+  font-size: 12px;
+  font-weight: 400;
+  color: #000000;
+}
+
+.validity-text strong {
+  font-weight: 500;
+  color: #000000;
+}
+
+.accordion-divider-line {
+  height: 1px;
+  background-color: #e2e8f0;
+}
+
+.info-chips-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+
+.info-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.info-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #000000;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chip-svg-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Card Bottom Divider & Footer Area */
+.card-bottom-divider {
+  height: 1px;
+  background-color: #f1f5f9;
+}
+
+.ticket-footer-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  background-color: #f8fafc;
+}
+
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.end-date-label {
+  font-size: 9.5px;
+  font-weight: 400;
+  color: #000000;
+}
+
+.end-date-value {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+}
+
+.btn-add-ticket-blue {
+  background-color: #194e9e;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(25, 78, 158, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.btn-add-ticket-blue:hover {
+  background-color: #0d3e91;
+}
+
+.stepper-blue-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.stepper-btn-minus, .stepper-btn-plus {
+  background: #194e9e;
+  color: #ffffff;
+  border: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepper-btn-minus {
+  background: #f1f5f9;
+  color: #194e9e;
+}
+
+.stepper-count-num {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
+  min-width: 14px;
+  text-align: center;
+}
+
+.sold-out-pill-btn {
+  background-color: #e2e8f0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+/* Accordion Transition */
+.accordion-expand-enter-active, .accordion-expand-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 300px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+.accordion-expand-enter-from, .accordion-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
 .ticket-type-card {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
@@ -2259,21 +3042,119 @@ const handleChat = () => {
   border-color: #cbd5e1;
 }
 
-/* Fixed Form Actions Button Bar relative to detail page */
+/* Fixed Form Actions Button Bar relative to detail page (Matches Screenshot) */
 .ticket-form-actions-bar-fixed {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  position: absolute;
+  flex-direction: column;
+  gap: 8px;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 100;
   background-color: #ffffff;
   border-top: 1px solid #f1f5f9;
-  padding: 8px 16px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+  padding: 10px 14px 12px 14px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.bottom-bar-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.bottom-bar-price-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.bottom-bar-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.bottom-bar-price-val {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.detail-toggle-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f8fafc;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #194e9e;
+  cursor: pointer;
+}
+
+.pill-chevron-icon {
+  width: 12px;
+  height: 12px;
+  stroke: #194e9e;
+  transition: transform 0.25s ease;
+}
+
+.pill-chevron-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.bottom-bar-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn-primary-blue-buy {
+  flex: 1;
+  background-color: #194e9e;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(25, 78, 158, 0.25);
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary-blue-buy:hover {
+  background-color: #0d3e91;
+}
+
+.btn-chat-bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: #194e9e;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(25, 78, 158, 0.25);
+}
+
+.chat-bubble-svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Transition for slide up */

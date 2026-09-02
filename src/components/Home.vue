@@ -9,6 +9,7 @@ import Profile from './Profile.vue';
 import Transaksi from './Transaksi.vue';
 import Explore from './Explore.vue';
 import Chat from './Chat.vue';
+import PersonalPemesan from './PersonalPemesan.vue';
 import { Vue3Lottie } from 'vue3-lottie';
 
 const emit = defineEmits(['logout']);
@@ -16,9 +17,27 @@ const emit = defineEmits(['logout']);
 const searchQuery = ref('');
 const activeTab = ref('home');
 const selectedEvent = ref(null);
+const activeChatTargetId = ref(null);
+const selectedTicketsData = ref({});
 
-const checkinInitialTab = ref('aktif');
-const checkinInitialEvent = ref(null);
+const handleSelectEvent = (evt) => {
+  selectedEvent.value = evt;
+  activeTab.value = 'event-detail';
+};
+
+const handleBuyTicket = (ticketData) => {
+  selectedTicketsData.value = ticketData;
+  activeTab.value = 'personal-pemesan';
+};
+
+const handleNavigateChat = (eventObj) => {
+  if (eventObj) {
+    activeChatTargetId.value = eventObj.organizer || eventObj.id || 2;
+  } else {
+    activeChatTargetId.value = 2; // Default to Maxpaincompany LTD
+  }
+  activeTab.value = 'chat';
+};
 
 // Placeholder typing animation logic
 const placeholders = ['Cari event musik...', 'Cari tiket pameran...', 'Cari kreator favorit...', 'Cari The Script...'];
@@ -316,6 +335,8 @@ const isChatRoomActive = ref(false);
 const handleChatRoomToggle = (isOpen) => {
   isChatRoomActive.value = isOpen;
 };
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.kolektix.my.id';
 
 const events = ref([
   {
@@ -644,9 +665,75 @@ const merchList = ref([
   }
 ]);
 
-const handleTarikSaldo = () => {
-  alert('Penarikan saldo sedang diproses');
+const fetchEventsFromAPI = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/event`);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const json = await res.json();
+    if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
+      const mappedEvents = json.data.map(item => {
+        let priceStr = 'Gratis';
+        if (item.starting_price && parseInt(item.starting_price) > 0) {
+          priceStr = 'Rp' + parseInt(item.starting_price).toLocaleString('id-ID');
+        } else if (item.has_event_ticket && item.has_event_ticket.length > 0) {
+          const firstPrice = item.has_event_ticket[0].price;
+          if (firstPrice && parseInt(firstPrice) > 0) {
+            priceStr = 'Rp' + parseInt(firstPrice).toLocaleString('id-ID');
+          }
+        }
+
+        let dateStr = item.start_date || 'Segera Hadir';
+        if (item.start_date) {
+          const d = new Date(item.start_date);
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+          }
+        }
+
+        let imageSrc = item.image_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80';
+        if (item.image && !item.image_url) {
+          imageSrc = `${API_URL}/storage/uploads/event/${item.image}`;
+        }
+
+        const orgName = item.has_creator?.name_event_organizer || item.has_creator?.name || item.organization_name || 'Kolektix Organizer';
+        const logoSrc = item.has_creator?.image_url || 'https://api.kolektix.my.id/storage/uploads/creator/logo-k.png';
+        const locStr = item.location_name || item.location_city || 'Indonesia';
+        const statusStr = item.has_event_status?.name || (item.activity_status === 1 ? 'Live' : 'Upcoming');
+
+        return {
+          id: item.id,
+          title: item.name || 'Event Kolektix',
+          price: priceStr,
+          organizer: orgName,
+          creatorLogo: logoSrc,
+          location: locStr,
+          date: dateStr,
+          sold: item.has_event_ticket?.[0]?.sold_qty || 45,
+          total: item.has_event_ticket?.[0]?.qty || 100,
+          status: statusStr === 'Draft' ? 'Draft' : statusStr,
+          category: item.tag || item.has_event_format?.name || 'Konser Musik',
+          image: imageSrc
+        };
+      });
+
+      events.value = mappedEvents;
+      popularEvents.value = mappedEvents.slice(0, Math.min(5, mappedEvents.length));
+      comingSoonEvents.value = mappedEvents.slice(0, Math.min(6, mappedEvents.length));
+    }
+  } catch (err) {
+    console.warn('Gagal memuat API events, menggunakan fallback data:', err);
+  }
 };
+
+onMounted(() => {
+  if (!window.LottiePlayer && !document.getElementById('lottie-player-script')) {
+    const script = document.createElement('script');
+    script.id = 'lottie-player-script';
+    script.src = 'https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js';
+    document.head.appendChild(script);
+  }
+  fetchEventsFromAPI();
+});
 </script>
 
 <template>
@@ -654,7 +741,7 @@ const handleTarikSaldo = () => {
     <!-- Top Nav Bar -->
     <!-- Top Nav Bar -->
     <header class="navbar-header" :class="{ 
-      'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail' || isChatRoomActive,
+      'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || isChatRoomActive,
       'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event',
       'navbar-scrolled': isScrolledFromTop 
     }">
@@ -758,9 +845,14 @@ const handleTarikSaldo = () => {
     </header>
 
     <!-- Main Scrollable Content Area -->
-    <main class="content-scroll-area" @scroll="handleScroll" :class="{ 'checkin-list-bg': activeTab === 'explore', 'dashboard-no-padding': activeTab === 'profile' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'create-event' || activeTab === 'event-detail' }">
+    <main class="content-scroll-area" @scroll="handleScroll" :class="{ 'checkin-list-bg': activeTab === 'explore', 'dashboard-no-padding': activeTab === 'profile' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' }">
+      <!-- Personal Pemesan tab content template -->
+      <template v-if="activeTab === 'personal-pemesan'">
+        <PersonalPemesan :event="selectedEvent" :selected-tickets="selectedTicketsData.selectedTickets" :tickets-list="selectedTicketsData.tickets" @back="activeTab = 'event-detail'" />
+      </template>
+
       <!-- Profile tab content template -->
-      <template v-if="activeTab === 'profile'">
+      <template v-else-if="activeTab === 'profile'">
         <Profile @logout="emit('logout')" @navigate-transaksi="activeTab = 'transaksi'" />
       </template>
 
@@ -837,7 +929,19 @@ const handleTarikSaldo = () => {
 
           <!-- Restored Event Cards List -->
           <div class="top-events-header">
-            <h2 class="top-events-title">Events Terbaru</h2>
+            <div class="title-with-blue-icon">
+              <div class="lottie-box-wrapper">
+                <lottie-player 
+                  src="/media/Ticket.json" 
+                  background="transparent" 
+                  speed="1" 
+                  class="section-title-lottie" 
+                  loop 
+                  autoplay
+                ></lottie-player>
+              </div>
+              <h2 class="top-events-title">Events Terbaru</h2>
+            </div>
           </div>
 
           <section class="cards-list-section">
@@ -845,6 +949,7 @@ const handleTarikSaldo = () => {
               v-for="event in events" 
               :key="event.id" 
               class="event-card"
+              @click="handleSelectEvent(event)"
             >
               <!-- Card Thumbnail Area -->
               <div class="card-thumbnail-wrapper">
@@ -858,52 +963,40 @@ const handleTarikSaldo = () => {
               <!-- Card Info Area -->
               <div class="card-info">
                 <div class="event-title-wrapper">
-                  <div v-if="event.title && event.title.length > 20" class="event-title-marquee">
+                  <div v-if="event.title && event.title.length > 22" class="event-title-marquee">
                     <h3 class="event-card-title">{{ event.title }}</h3>
                     <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
                   </div>
                   <h3 v-else class="event-card-title static">{{ event.title }}</h3>
                 </div>
+
+                <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
+                <div class="meta-combined-row">
+                  <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+                </div>
+
+                <!-- Price Row above creator (Aligned Right) -->
+                <div class="card-price-top-row">
+                  <span class="event-card-price">{{ event.price }}</span>
+                </div>
+
+                <!-- Divider line between Price and Creator -->
+                <div class="card-middle-divider"></div>
                 
-                <!-- Creator Profile & Verified Badge Row -->
+                <!-- Creator Profile Row below Divider -->
                 <div class="creator-profile-row">
                   <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
-                  <span class="creator-name">{{ event.organizer }}</span>
-                  <span class="verified-badge">
-                    <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </span>
-                </div>
-                
-                <div class="meta-row" v-if="event.location">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                    <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
-                  </svg>
-                  <div class="meta-text-wrapper">
-                    <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
-                      <span class="meta-text">{{ event.location }}</span>
-                      <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
+                  <div class="creator-text-wrap">
+                    <span class="creator-by-label">Diselenggarakan oleh:</span>
+                    <div class="creator-name-with-badge">
+                      <span class="creator-name">{{ event.organizer }}</span>
+                      <span class="verified-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                      </span>
                     </div>
-                    <span v-else class="meta-text static">{{ event.location }}</span>
                   </div>
-                </div>
-
-                <div class="meta-row" v-if="event.date">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                    <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
-                  </svg>
-                  <div class="meta-text-wrapper">
-                    <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
-                      <span class="meta-text">{{ event.date }}</span>
-                      <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
-                    </div>
-                    <span v-else class="meta-text static">{{ event.date }}</span>
-                  </div>
-                </div>
-
-                <div class="price-row">
-                  <span class="event-card-price">{{ event.price }}</span>
                 </div>
               </div>
             </div>
@@ -911,7 +1004,19 @@ const handleTarikSaldo = () => {
 
           <!-- Segera Hadir Section -->
           <div class="top-events-header coming-soon-header">
-            <h2 class="top-events-title">Segera Hadir</h2>
+            <div class="title-with-blue-icon">
+              <div class="lottie-box-wrapper">
+                <lottie-player 
+                  src="/media/star.json" 
+                  background="transparent" 
+                  speed="1" 
+                  class="section-title-lottie star-lottie" 
+                  loop 
+                  autoplay
+                ></lottie-player>
+              </div>
+              <h2 class="top-events-title">Segera Hadir</h2>
+            </div>
           </div>
 
           <div class="coming-soon-wrapper">
@@ -952,46 +1057,34 @@ const handleTarikSaldo = () => {
                         </div>
                         <h3 v-else class="event-card-title static">{{ event.title }}</h3>
                       </div>
+
+                      <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
+                      <div class="meta-combined-row">
+                        <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+                      </div>
+
+                      <!-- Price Row above creator (Aligned Right) -->
+                      <div class="card-price-top-row">
+                        <span class="event-card-price">{{ event.price || 'Gratis' }}</span>
+                      </div>
+
+                      <!-- Divider line between Price and Creator -->
+                      <div class="card-middle-divider"></div>
                       
-                      <!-- Creator Profile & Verified Badge Row -->
+                      <!-- Creator Profile Row below Divider -->
                       <div class="creator-profile-row">
                         <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
-                        <span class="creator-name">{{ event.organizer }}</span>
-                        <span class="verified-badge">
-                          <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                          </svg>
-                        </span>
-                      </div>
-                      
-                      <div class="meta-row" v-if="event.location">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                          <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
-                        </svg>
-                        <div class="meta-text-wrapper">
-                          <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
-                            <span class="meta-text">{{ event.location }}</span>
-                            <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
+                        <div class="creator-text-wrap">
+                          <span class="creator-by-label">Diselenggarakan oleh:</span>
+                          <div class="creator-name-with-badge">
+                            <span class="creator-name">{{ event.organizer }}</span>
+                            <span class="verified-badge">
+                              <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                              </svg>
+                            </span>
                           </div>
-                          <span v-else class="meta-text static">{{ event.location }}</span>
                         </div>
-                      </div>
-
-                      <div class="meta-row" v-if="event.date">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                          <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
-                        </svg>
-                        <div class="meta-text-wrapper">
-                          <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
-                            <span class="meta-text">{{ event.date }}</span>
-                            <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
-                          </div>
-                          <span v-else class="meta-text static">{{ event.date }}</span>
-                        </div>
-                      </div>
-
-                      <div class="price-row">
-                        <span class="event-card-price">{{ event.price }}</span>
                       </div>
                     </div>
                   </div>
@@ -1013,7 +1106,19 @@ const handleTarikSaldo = () => {
 
           <!-- Additional Events Section: Event Populer -->
           <div class="top-events-header extra-section-header">
-            <h2 class="top-events-title">Event Populer</h2>
+            <div class="title-with-blue-icon">
+              <div class="lottie-box-wrapper">
+                <lottie-player 
+                  src="/media/Fire.json" 
+                  background="transparent" 
+                  speed="1" 
+                  class="section-title-lottie" 
+                  loop 
+                  autoplay
+                ></lottie-player>
+              </div>
+              <h2 class="top-events-title">Event Populer</h2>
+            </div>
           </div>
 
           <section class="cards-list-section">
@@ -1034,51 +1139,40 @@ const handleTarikSaldo = () => {
               <!-- Card Info Area -->
               <div class="card-info">
                 <div class="event-title-wrapper">
-                  <div v-if="event.title && event.title.length > 20" class="event-title-marquee">
+                  <div v-if="event.title && event.title.length > 22" class="event-title-marquee">
                     <h3 class="event-card-title">{{ event.title }}</h3>
                     <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
                   </div>
                   <h3 v-else class="event-card-title static">{{ event.title }}</h3>
                 </div>
+
+                <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
+                <div class="meta-combined-row">
+                  <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+                </div>
+
+                <!-- Price Row above creator (Aligned Right) -->
+                <div class="card-price-top-row">
+                  <span class="event-card-price">{{ event.price || 'Gratis' }}</span>
+                </div>
+
+                <!-- Divider line between Price and Creator -->
+                <div class="card-middle-divider"></div>
                 
+                <!-- Creator Profile Row below Divider -->
                 <div class="creator-profile-row">
                   <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
-                  <span class="creator-name">{{ event.organizer }}</span>
-                  <span class="verified-badge">
-                    <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </span>
-                </div>
-                
-                <div class="meta-row" v-if="event.location">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                    <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
-                  </svg>
-                  <div class="meta-text-wrapper">
-                    <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
-                      <span class="meta-text">{{ event.location }}</span>
-                      <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
+                  <div class="creator-text-wrap">
+                    <span class="creator-by-label">Diselenggarakan oleh:</span>
+                    <div class="creator-name-with-badge">
+                      <span class="creator-name">{{ event.organizer }}</span>
+                      <span class="verified-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                      </span>
                     </div>
-                    <span v-else class="meta-text static">{{ event.location }}</span>
                   </div>
-                </div>
-
-                <div class="meta-row" v-if="event.date">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
-                    <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
-                  </svg>
-                  <div class="meta-text-wrapper">
-                    <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
-                      <span class="meta-text">{{ event.date }}</span>
-                      <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
-                    </div>
-                    <span v-else class="meta-text static">{{ event.date }}</span>
-                  </div>
-                </div>
-
-                <div class="price-row">
-                  <span class="event-card-price">{{ event.price }}</span>
                 </div>
               </div>
             </div>
@@ -1086,7 +1180,19 @@ const handleTarikSaldo = () => {
 
           <!-- Section Event Paling Laku (Infinite Loop 1 Card at a Time) -->
           <div class="top-events-header extra-section-header">
-            <h2 class="top-events-title">Event Paling Laku</h2>
+            <div class="title-with-blue-icon">
+              <div class="lottie-box-wrapper">
+                <lottie-player 
+                  src="/media/Fire.json" 
+                  background="transparent" 
+                  speed="1" 
+                  class="section-title-lottie" 
+                  loop 
+                  autoplay
+                ></lottie-player>
+              </div>
+              <h2 class="top-events-title">Event Paling Laku</h2>
+            </div>
           </div>
 
           <div 
@@ -1204,7 +1310,19 @@ const handleTarikSaldo = () => {
 
           <!-- Section Event Berdasarkan Kota / Daerah (Single Horizontal Scroll Line) -->
           <div class="top-events-header extra-section-header city-section-header">
-            <h2 class="top-events-title">Event di Kota Kamu</h2>
+            <div class="title-with-blue-icon">
+              <div class="lottie-box-wrapper">
+                <lottie-player 
+                  src="/media/star.json" 
+                  background="transparent" 
+                  speed="1" 
+                  class="section-title-lottie star-lottie" 
+                  loop 
+                  autoplay
+                ></lottie-player>
+              </div>
+              <h2 class="top-events-title">Event di Kota Kamu</h2>
+            </div>
           </div>
 
           <div class="city-scroll-list">
@@ -1278,7 +1396,19 @@ const handleTarikSaldo = () => {
 
           <!-- Section Official Merchandise (Right below City Cards) -->
           <div class="top-events-header extra-section-header">
-            <h2 class="top-events-title">Merchandise Official</h2>
+            <div class="title-with-blue-icon">
+              <div class="lottie-box-wrapper">
+                <lottie-player 
+                  src="/media/Ticket.json" 
+                  background="transparent" 
+                  speed="1" 
+                  class="section-title-lottie" 
+                  loop 
+                  autoplay
+                ></lottie-player>
+              </div>
+              <h2 class="top-events-title">Merchandise Official</h2>
+            </div>
           </div>
 
           <div class="merch-scroll-list">
@@ -1318,13 +1448,16 @@ const handleTarikSaldo = () => {
       </template>
 
       <!-- Chat Component -->
-      <Chat v-else-if="activeTab === 'chat'" @room-toggle="handleChatRoomToggle" />
+      <Chat v-else-if="activeTab === 'chat'" :initial-chat-id="activeChatTargetId" @room-toggle="handleChatRoomToggle" />
 
       <!-- Explore Component -->
-      <Explore v-else-if="activeTab === 'explore'" />
+      <Explore v-else-if="activeTab === 'explore'" :events="events" @select-event="handleSelectEvent" />
 
       <!-- Event Component -->
-      <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" />
+      <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" @lihat-detail="handleSelectEvent" />
+
+      <!-- Event Detail Component -->
+      <EventDetail v-else-if="activeTab === 'event-detail'" :event="selectedEvent" @back="activeTab = 'event'" @navigate-chat="handleNavigateChat" @buy-ticket="handleBuyTicket" />
 
       <!-- Transaksi Component -->
       <Transaksi v-else-if="activeTab === 'transaksi'" />
@@ -1336,7 +1469,7 @@ const handleTarikSaldo = () => {
       <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
     </main>
 
-    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
+    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
       <button class="nav-tab home-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'">
         <img 
           :src="activeTab === 'home' ? '/media/home (2).png' : '/media/home (1).png'" 
@@ -1346,7 +1479,7 @@ const handleTarikSaldo = () => {
         <span class="tab-label home-label">Home</span>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'chat' }" @click="activeTab = 'chat'">
+      <button class="nav-tab" :class="{ active: activeTab === 'chat' }" @click="activeChatTargetId = null; activeTab = 'chat'">
         <!-- Chat Icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
@@ -1573,11 +1706,13 @@ const handleTarikSaldo = () => {
 }
 
 .navbar-header.hidden-header {
+  display: none !important;
   transform: translateY(-100%);
   opacity: 0;
-  height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   overflow: hidden;
   border: none;
   pointer-events: none;
@@ -1681,6 +1816,10 @@ const handleTarikSaldo = () => {
   scrollbar-width: none;
   touch-action: pan-y;
   overscroll-behavior-x: none;
+}
+
+.content-scroll-area.dashboard-no-padding {
+  padding-bottom: 0 !important;
 }
 
 .content-scroll-area::-webkit-scrollbar {
@@ -1888,6 +2027,57 @@ const handleTarikSaldo = () => {
 .top-events-header.coming-soon-header {
   margin-top: 0px;
   margin-bottom: 0px;
+}
+
+.title-with-blue-icon {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lottie-box-wrapper {
+  width: 22px;
+  height: 22px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.section-title-lottie {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.section-title-lottie.star-lottie {
+  width: 65px;
+  height: 65px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .section-title-lottie {
+    width: 20px;
+    height: 20px;
+  }
+
+  .lottie-box-wrapper {
+    width: 20px;
+    height: 20px;
+  }
+
+  .section-title-lottie.star-lottie {
+    width: 58px;
+    height: 58px;
+  }
 }
 
 .top-events-title {
@@ -2264,7 +2454,7 @@ const handleTarikSaldo = () => {
   display: flex;
   flex-direction: row;
   overflow-x: auto;
-  gap: 16px;
+  gap: 10px;
   padding-bottom: 16px;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
@@ -2280,42 +2470,46 @@ const handleTarikSaldo = () => {
 }
 
 .event-card {
-  background-color: var(--white);
-  border: 1px solid var(--light-grey);
-  border-radius: 8px; /* reduced rounded corners */
+  background-color: #ffffff;
+  border: none !important;
+  border-radius: 10px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-  flex: 0 0 85%; /* Widened again */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex: 0 0 250px;
+  width: 250px;
 }
 
 .card-thumbnail-wrapper {
   position: relative;
   width: 100%;
-  height: 130px; /* Reduced height */
+  height: 110px; /* Shortened height */
   background-color: var(--light-grey);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .event-thumbnail {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 6px;
 }
 
 .status-badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 8px;
+  left: 8px;
   background-color: var(--white);
   border-radius: 20px;
-  padding: 3px 8px; /* reduced from 4px 10px */
-  font-size: 10px; /* reduced from 11px */
+  padding: 2px 6px;
+  font-size: 9px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 4px; /* reduced from 6px */
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  gap: 3px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
 }
 
 .status-badge.live {
@@ -2340,10 +2534,14 @@ const handleTarikSaldo = () => {
 
 .status-badge.upcoming {
   color: #ea580c;
+  padding: 2px 6px;
+  font-size: 8.5px;
 }
 
 .status-badge.upcoming .status-dot {
   background-color: #ea580c;
+  width: 4px;
+  height: 4px;
 }
 
 .status-dot {
@@ -2354,7 +2552,7 @@ const handleTarikSaldo = () => {
 }
 
 .card-info {
-  padding: 12px;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2376,10 +2574,10 @@ const handleTarikSaldo = () => {
 }
 
 .event-card-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 600; /* Slightly increased bold */
   color: var(--dark);
-  line-height: 1.4;
+  line-height: 1.3;
   white-space: nowrap;
   flex-shrink: 0;
   padding-right: 18px;
@@ -2391,104 +2589,96 @@ const handleTarikSaldo = () => {
   text-overflow: ellipsis;
 }
 
-@keyframes cardTitleMarquee {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    transform: translate3d(-50%, 0, 0);
-  }
+.meta-combined-row {
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+  margin-bottom: 4px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.meta-inline-text {
+  font-size: 11px;
+  font-weight: 400;
+  color: #494a4a; /* Updated grey color */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-price-top-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 2px;
+  width: 100%;
+}
+
+.card-middle-divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 6px 0 4px 0;
+  width: 100%;
 }
 
 /* Creator Profile & Verified Checkmark badge */
 .creator-profile-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 2px;
+  gap: 6px;
 }
 
 .creator-avatar {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--primary-light-200);
 }
 
+.creator-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  overflow: hidden;
+}
+
+.creator-by-label {
+  font-size: 9px;
+  font-weight: 400; /* Non-bold */
+  color: #494a4a;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.creator-name-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .creator-name {
-  font-size: 12px;
-  font-weight: 600; /* Semi-bold text creator */
-  color: var(--dark); /* Black color text */
+  font-size: 11px;
+  font-weight: 500;
+  color: #151416;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .verified-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #2196F3; /* Verified blue check badge */
+  color: #2196F3;
+  flex-shrink: 0;
 }
 
 .verified-check-svg {
-  width: 16px;
-  height: 16px;
-}
-
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--dark);
-  margin-top: 2px;
-  overflow: hidden;
-  width: 100%;
-}
-
-.meta-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--primary-base);
-  flex-shrink: 0;
-}
-
-.meta-text-wrapper {
-  flex: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  position: relative;
-  min-width: 0;
-}
-
-.meta-text-marquee {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  animation: metaTextMarquee 12s linear infinite;
-  will-change: transform;
-}
-
-.meta-text {
-  font-size: 12px;
-  color: var(--dark);
-  white-space: nowrap;
-  flex-shrink: 0;
-  padding-right: 18px;
-}
-
-.meta-text.static {
-  padding-right: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@keyframes metaTextMarquee {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    transform: translate3d(-50%, 0, 0);
-  }
+  width: 12px;
+  height: 12px;
 }
 
 .price-row {
@@ -2496,8 +2686,8 @@ const handleTarikSaldo = () => {
 }
 
 .event-card-price {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 600; /* Slightly increased bold price */
   color: var(--dark);
   display: inline-block;
 }
@@ -2581,10 +2771,10 @@ const handleTarikSaldo = () => {
 }
 
 .bottom-nav.nav-scrolled {
-  transform: scale(0.85); /* Removed translateY to keep it higher */
-  height: 56px;
+  transform: scale(0.88);
+  height: 58px;
   border-radius: 28px;
-  bottom: 24px; /* Kept at same height as normal nav */
+  bottom: 32px; /* Raised higher above bottom edge */
 }
 
 .bottom-nav.hidden-nav {
