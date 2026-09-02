@@ -630,8 +630,7 @@ const closeTicketModal = () => {
   overflow-x: auto;
   padding: 4px 16px 12px 16px;
   scrollbar-width: none;
-  touch-action: pan-x;
-  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -651,6 +650,7 @@ const closeTicketModal = () => {
   flex-direction: column;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
   cursor: pointer;
+  touch-action: pan-x pan-y;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
