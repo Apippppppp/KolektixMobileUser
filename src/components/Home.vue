@@ -8,6 +8,7 @@ import EventDetail from './EventDetail.vue';
 import Profile from './Profile.vue';
 import Transaksi from './Transaksi.vue';
 import Explore from './Explore.vue';
+import Chat from './Chat.vue';
 import { Vue3Lottie } from 'vue3-lottie';
 
 const emit = defineEmits(['logout']);
@@ -309,6 +310,12 @@ const handleMouseUp = () => handleDragEnd();
 const isSidebarOpen = ref(false);
 const isSaldoOpen = ref(true);
 const isEventGroupOpen = ref(true);
+const isSearchOpen = ref(true);
+const isChatRoomActive = ref(false);
+
+const handleChatRoomToggle = (isOpen) => {
+  isChatRoomActive.value = isOpen;
+};
 
 const events = ref([
   {
@@ -647,11 +654,11 @@ const handleTarikSaldo = () => {
     <!-- Top Nav Bar -->
     <!-- Top Nav Bar -->
     <header class="navbar-header" :class="{ 
-      'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail',
-      'navbar-home': activeTab === 'home',
+      'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail' || isChatRoomActive,
+      'navbar-home': activeTab === 'home' || activeTab === 'chat',
       'navbar-scrolled': isScrolledFromTop 
     }">
-      <template v-if="activeTab === 'home'">
+      <template v-if="activeTab === 'home' || activeTab === 'chat'">
         <div class="home-nav-container">
           <!-- Top Row: Account Greeting & Simple Action Icons -->
           <div class="home-nav-top">
@@ -668,13 +675,26 @@ const handleTarikSaldo = () => {
             </div>
 
             <div class="nav-right-actions">
-              <button class="nav-icon-btn notification-btn" title="Notifikasi" @click="isSidebarOpen = true">
+              <!-- Collapse Toggle Button for Search Bar -->
+              <button 
+                class="nav-icon-btn search-toggle-btn" 
+                :class="{ active: isSearchOpen }"
+                title="Toggle Pencarian" 
+                @click="isSearchOpen = !isSearchOpen"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="header-action-icon">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
+
+              <!-- <button class="nav-icon-btn notification-btn" title="Notifikasi" @click="isSidebarOpen = true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header-action-icon">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
                 <span class="notification-badge-dot"></span>
-              </button>
+              </button> -->
 
               <button class="nav-icon-btn cart-btn" title="Keranjang" @click="isSidebarOpen = true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header-action-icon">
@@ -686,15 +706,24 @@ const handleTarikSaldo = () => {
             </div>
           </div>
 
-          <!-- Bottom Row: Search Bar -->
-          <div class="home-search-bar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="search-bar-icon">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" v-model="searchQuery" :placeholder="currentPlaceholder" class="search-bar-input" />
-            
-          </div>
+          <!-- Bottom Row: Search Bar with Ultra Smooth Collapse Transition -->
+          <transition name="search-collapse">
+            <div v-if="isSearchOpen" class="search-bar-wrapper">
+              <div class="home-search-bar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="search-bar-icon">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" v-model="searchQuery" :placeholder="currentPlaceholder" class="search-bar-input" />
+                <button class="search-close-btn" title="Tutup Pencarian" @click="isSearchOpen = false">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" class="close-search-icon">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </transition>
         </div>
       </template>
 
@@ -1278,18 +1307,26 @@ const handleTarikSaldo = () => {
         </div>
       </template>
 
+      <!-- Chat Component -->
+      <Chat v-else-if="activeTab === 'chat'" @room-toggle="handleChatRoomToggle" />
+
+      <!-- Explore Component -->
+      <Explore v-else-if="activeTab === 'explore'" />
+
       <!-- Event Component -->
       <Event v-else-if="activeTab === 'event'" :events="events" :initial-filter="eventInitialFilter" @switch-tab="handleSwitchTab" />
 
-      <!-- Event Detail Component (Disabled for now) -->
-      <!-- <EventDetail v-else-if="activeTab === 'event-detail'" :event="selectedEvent" @back="activeTab = 'event'" /> -->
+      <!-- Transaksi Component -->
+      <Transaksi v-else-if="activeTab === 'transaksi'" />
+
+      <!-- Profile Component -->
+      <Profile v-else-if="activeTab === 'profile'" />
 
       <!-- Create Event Component -->
       <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
     </main>
 
-    <!-- Bottom Tab Navigation Bar -->
-    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail', 'nav-scrolled': isScrolledDown }">
+    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
       <button class="nav-tab home-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'">
         <img 
           :src="activeTab === 'home' ? '/media/home (2).png' : '/media/home (1).png'" 
@@ -1299,13 +1336,12 @@ const handleTarikSaldo = () => {
         <span class="tab-label home-label">Home</span>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'explore' }" @click="activeTab = 'explore'">
-        <!-- Compass / Explore Icon -->
+      <button class="nav-tab" :class="{ active: activeTab === 'chat' }" @click="activeTab = 'chat'">
+        <!-- Chat Icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <circle cx="12" cy="12" r="10" />
-          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
         </svg>
-        <span class="tab-label">Explore</span>
+        <span class="tab-label">Chat</span>
       </button>
 
       <button class="nav-tab" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null)">
@@ -4220,6 +4256,7 @@ const handleTarikSaldo = () => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  padding: 4px 0 2px 0;
 }
 
 .account-group {
@@ -4240,8 +4277,8 @@ const handleTarikSaldo = () => {
 }
 
 .menu-lines-icon {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   color: #194e9e;
   transition: color 0.35s ease;
 }
@@ -4256,7 +4293,7 @@ const handleTarikSaldo = () => {
 }
 
 .account-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #0f172a;
   transition: color 0.35s ease;
@@ -4280,7 +4317,7 @@ const handleTarikSaldo = () => {
 .nav-right-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .nav-icon-btn {
@@ -4292,16 +4329,21 @@ const handleTarikSaldo = () => {
   position: relative;
   cursor: pointer;
   padding: 4px;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
+  border-radius: 8px;
 }
 
 .nav-icon-btn:hover {
   opacity: 0.8;
 }
 
+.search-toggle-btn.active {
+  background-color: rgba(25, 78, 158, 0.08);
+}
+
 .header-action-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   color: #194e9e;
   transition: color 0.35s ease;
 }
@@ -4328,25 +4370,87 @@ const handleTarikSaldo = () => {
   border: 1px solid #e5e7eb;
   border-radius: 50px;
   padding: 0 14px;
-  height: 42px;
+  height: 44px;
   width: 100%;
 }
 
 .search-bar-icon {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   margin-right: 10px;
   stroke: #194e9e;
+  flex-shrink: 0;
 }
 
 .search-bar-input {
   border: none;
   background: transparent;
   outline: none;
-  font-size: 12px;
+  font-size: 12.5px;
   color: #1f2937;
   flex: 1;
   width: 100%;
+}
+
+.search-close-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 6px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.search-close-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.close-search-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.search-bar-wrapper {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Ultra Smooth Search Bar Collapse Transition */
+.search-collapse-enter-active {
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 70px;
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+  transform-origin: top center;
+  overflow: hidden;
+}
+
+.search-collapse-leave-active {
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 70px;
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+  transform-origin: top center;
+  overflow: hidden;
+}
+
+.search-collapse-enter-from,
+.search-collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px) scaleY(0.85);
+  margin-top: -4px;
+  overflow: hidden;
 }
 
 .search-filter-btn {
