@@ -8,6 +8,16 @@ const activeFilter = ref('Semua');
 const newMessageText = ref('');
 const isTyping = ref(false);
 const chatMessagesContainer = ref(null);
+const imageInputRef = ref(null);
+const docInputRef = ref(null);
+
+const isCallActive = ref(false);
+const callStatusText = ref('Memanggil...');
+const callDurationSeconds = ref(0);
+const isMuted = ref(false);
+const isSpeakerOn = ref(false);
+let callTimerInterval = null;
+let callConnectTimeout = null;
 
 const filterOptions = ['Semua', 'Belum Dibaca', 'Event', 'Komunitas'];
 
@@ -183,13 +193,13 @@ const filteredChats = computed(() => {
 const openChatRoom = (chat) => {
   activeChat.value = chat;
   chat.unread = 0;
-  emit('room-toggle', true); // Hide bottom-nav & navbar-header in home
+  emit('room-toggle', true);
   scrollToBottom();
 };
 
 const closeChatRoom = () => {
   activeChat.value = null;
-  emit('room-toggle', false); // Show bottom-nav & navbar-header
+  emit('room-toggle', false);
 };
 
 const scrollToBottom = () => {
@@ -247,6 +257,151 @@ const sendMessage = () => {
       scrollToBottom();
     }
   }, 1200);
+};
+
+const triggerImageSelect = () => {
+  if (imageInputRef.value) imageInputRef.value.click();
+};
+
+const triggerDocSelect = () => {
+  if (docInputRef.value) docInputRef.value.click();
+};
+
+const handleImageUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file || !activeChat.value) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    const imageMsg = {
+      id: Date.now(),
+      text: '',
+      image: e.target.result,
+      time: timeStr,
+      sender: 'me',
+      status: 'read'
+    };
+
+    activeChat.value.messages.push(imageMsg);
+    activeChat.value.lastMessage = '📷 Foto';
+    activeChat.value.lastTime = timeStr;
+    scrollToBottom();
+
+    isTyping.value = true;
+    setTimeout(() => {
+      isTyping.value = false;
+      const replyMsg = {
+        id: Date.now() + 1,
+        text: 'Wah keren fotonya kak! Ada yang bisa kami bantu lagi? 😊',
+        time: timeStr,
+        sender: 'them',
+        status: 'read'
+      };
+      if (activeChat.value) {
+        activeChat.value.messages.push(replyMsg);
+        activeChat.value.lastMessage = replyMsg.text;
+        activeChat.value.lastTime = replyMsg.time;
+        scrollToBottom();
+      }
+    }, 1200);
+  };
+  reader.readAsDataURL(file);
+};
+
+const handleDocUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file || !activeChat.value) return;
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+  const fileSizeStr = `${(file.size / 1024).toFixed(1)} KB`;
+
+  const docMsg = {
+    id: Date.now(),
+    text: '',
+    file: {
+      name: file.name,
+      size: fileSizeStr
+    },
+    time: timeStr,
+    sender: 'me',
+    status: 'read'
+  };
+
+  activeChat.value.messages.push(docMsg);
+  activeChat.value.lastMessage = `📄 ${file.name}`;
+  activeChat.value.lastTime = timeStr;
+  scrollToBottom();
+
+  isTyping.value = true;
+  setTimeout(() => {
+    isTyping.value = false;
+    const replyMsg = {
+      id: Date.now() + 1,
+      text: `Dokumen "${file.name}" telah kami terima. Terima kasih kak! 🙏`,
+      time: timeStr,
+      sender: 'them',
+      status: 'read'
+    };
+    if (activeChat.value) {
+      activeChat.value.messages.push(replyMsg);
+      activeChat.value.lastMessage = replyMsg.text;
+      activeChat.value.lastTime = replyMsg.time;
+      scrollToBottom();
+    }
+  }, 1200);
+};
+
+const formatCallTime = (totalSec) => {
+  const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
+  const s = String(totalSec % 60).padStart(2, '0');
+  return `${m}:${s}`;
+};
+
+const startVoiceCall = () => {
+  if (!activeChat.value) return;
+  isCallActive.value = true;
+  callStatusText.value = 'Memanggil...';
+  callDurationSeconds.value = 0;
+  isMuted.value = false;
+  isSpeakerOn.value = false;
+
+  callConnectTimeout = setTimeout(() => {
+    callStatusText.value = 'Terhubung 00:00';
+    callTimerInterval = setInterval(() => {
+      callDurationSeconds.value++;
+      callStatusText.value = `Terhubung ${formatCallTime(callDurationSeconds.value)}`;
+    }, 1000);
+  }, 2000);
+};
+
+const endVoiceCall = () => {
+  clearTimeout(callConnectTimeout);
+  clearInterval(callTimerInterval);
+
+  const durationFormatted = callDurationSeconds.value > 0 ? formatCallTime(callDurationSeconds.value) : '';
+  const callEndText = durationFormatted ? `Panggilan Suara (${durationFormatted})` : 'Panggilan Tidak Terjawab';
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+
+  if (activeChat.value) {
+    activeChat.value.messages.push({
+      id: Date.now(),
+      text: `📞 ${callEndText}`,
+      time: timeStr,
+      sender: 'me',
+      status: 'read'
+    });
+    activeChat.value.lastMessage = `📞 ${callEndText}`;
+    activeChat.value.lastTime = timeStr;
+    scrollToBottom();
+  }
+
+  isCallActive.value = false;
 };
 </script>
 
@@ -347,7 +502,7 @@ const sendMessage = () => {
           </div>
 
           <div class="header-action-buttons">
-            <button class="room-icon-btn" title="Panggilan Suara">
+            <button class="room-icon-btn" title="Panggilan Suara" @click="startVoiceCall">
               <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2" class="room-svg">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
               </svg>
@@ -355,7 +510,7 @@ const sendMessage = () => {
           </div>
         </header>
 
-        <!-- Messages Stream with Authentic WhatsApp Style Wallpaper Pattern -->
+        <!-- Messages Stream with Authentic Wallpaper Pattern -->
         <div class="messages-wall" ref="chatMessagesContainer">
           <div class="date-divider">
             <span>Hari Ini</span>
@@ -369,7 +524,23 @@ const sendMessage = () => {
           >
             <div class="msg-bubble">
               <span v-if="msg.senderName" class="group-sender-title">{{ msg.senderName }}</span>
-              <p class="msg-text">{{ msg.text }}</p>
+              
+              <!-- Sent/Received Image Preview -->
+              <img v-if="msg.image" :src="msg.image" class="chat-msg-img" />
+
+              <!-- Sent/Received File Document Preview -->
+              <div v-if="msg.file" class="chat-msg-file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2" class="file-icon-svg">
+                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                  <polyline points="13 2 13 9 20 9"></polyline>
+                </svg>
+                <div class="file-info-group">
+                  <span class="file-name">{{ msg.file.name }}</span>
+                  <span class="file-size">{{ msg.file.size }}</span>
+                </div>
+              </div>
+
+              <p v-if="msg.text" class="msg-text">{{ msg.text }}</p>
               <div class="msg-time-status">
                 <span class="msg-time">{{ msg.time }}</span>
                 <svg v-if="msg.sender === 'me'" viewBox="0 0 24 24" fill="#194e9e" class="read-check-icon">
@@ -391,6 +562,18 @@ const sendMessage = () => {
 
         <!-- Bottom Chat Input Bar -->
         <div class="chat-bottom-input-bar">
+          <!-- Hidden File Inputs -->
+          <input type="file" ref="imageInputRef" accept="image/*" capture="environment" class="hidden-file-input" @change="handleImageUpload" />
+          <input type="file" ref="docInputRef" accept="*/*" class="hidden-file-input" @change="handleDocUpload" />
+
+          <!-- Plus (+) Attachment Button for Files/Documents -->
+          <button class="attach-plus-btn" title="Tambah Dokumen / Berkas" @click="triggerDocSelect">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.5" class="plus-icon-svg">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+
           <div class="input-field-wrapper">
             <input 
               type="text" 
@@ -399,6 +582,14 @@ const sendMessage = () => {
               class="chat-text-input"
               @keyup.enter="sendMessage"
             />
+
+            <!-- Camera Icon Button for Direct Camera -->
+            <button class="camera-action-btn" title="Ambil Foto Kamera" @click="triggerImageSelect">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2" class="camera-icon-svg">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </button>
           </div>
 
           <button class="send-action-btn" @click="sendMessage">
@@ -407,6 +598,49 @@ const sendMessage = () => {
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
           </button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- VOICE CALL FULLSCREEN OVERLAY -->
+    <transition name="chat-room-slide">
+      <div v-if="isCallActive && activeChat" class="voice-call-overlay">
+        <div class="call-card-content">
+          <!-- Pulsing Ripple Avatar -->
+          <div class="call-avatar-wrapper">
+            <div class="pulse-ring ring-1"></div>
+            <div class="pulse-ring ring-2"></div>
+            <img :src="activeChat.avatar" :alt="activeChat.name" class="call-avatar-img" />
+          </div>
+
+          <h2 class="call-contact-name">{{ activeChat.name }}</h2>
+          <p class="call-status-timer">{{ callStatusText }}</p>
+
+          <!-- Call Action Controls -->
+          <div class="call-controls-row">
+            <button class="call-btn-control" :class="{ active: isMuted }" @click="isMuted = !isMuted" title="Mute Mikrofon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="call-control-svg">
+                <line v-if="isMuted" x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+
+            <button class="call-btn-control end-call-btn" @click="endVoiceCall" title="Tutup Panggilan">
+              <svg viewBox="0 0 24 24" fill="#ffffff" class="end-call-svg">
+                <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1 0-1.41C2.98 8.78 6.94 7 12 7c5.06 0 9.02 1.78 11.71 4.67.39.39.39 1.02 0 1.41l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+              </svg>
+            </button>
+
+            <button class="call-btn-control" :class="{ active: isSpeakerOn }" @click="isSpeakerOn = !isSpeakerOn" title="Speaker">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="call-control-svg">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </transition>
@@ -897,13 +1131,43 @@ const sendMessage = () => {
 }
 
 /* Bottom Chat Input Bar */
+.hidden-file-input {
+  display: none;
+}
+
 .chat-bottom-input-bar {
   background-color: #ffffff;
-  padding: 10px 14px 14px 14px;
+  padding: 10px 12px 14px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border-top: 1px solid #e2e8f0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.attach-plus-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #f0f6ff;
+  border: 1px solid #e0ecfb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.attach-plus-btn:hover {
+  background-color: #e2eefe;
+}
+
+.plus-icon-svg {
+  width: 18px;
+  height: 18px;
 }
 
 .input-field-wrapper {
@@ -913,8 +1177,8 @@ const sendMessage = () => {
   border-radius: 24px;
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  height: 42px;
+  padding: 0 6px 0 14px;
+  height: 38px;
 }
 
 .chat-text-input {
@@ -930,9 +1194,73 @@ const sendMessage = () => {
   color: #94a3b8;
 }
 
+.camera-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.camera-action-btn:hover {
+  background-color: rgba(25, 78, 158, 0.08);
+}
+
+.camera-icon-svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* Chat Image & Document Messages */
+.chat-msg-img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.chat-msg-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: rgba(25, 78, 158, 0.08);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.file-icon-svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.file-info-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.file-size {
+  font-size: 10px;
+  color: #64748b;
+}
+
 .send-action-btn {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background-color: #194e9e;
   border: none;
@@ -950,7 +1278,133 @@ const sendMessage = () => {
 }
 
 .send-icon-svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
+}
+
+/* Voice Call Fullscreen Overlay */
+.voice-call-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #0f172a 0%, #194e9e 100%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  padding: 40px 20px;
+}
+
+.call-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 320px;
+}
+
+.call-avatar-wrapper {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-avatar-img {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.pulse-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  animation: callPulse 2s infinite ease-out;
+}
+
+.ring-1 { width: 100px; height: 100px; animation-delay: 0s; }
+.ring-2 { width: 125px; height: 125px; animation-delay: 0.6s; }
+
+@keyframes callPulse {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+.call-contact-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  text-align: center;
+}
+
+.call-status-timer {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 60px;
+  font-weight: 500;
+}
+
+.call-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  width: 100%;
+}
+
+.call-btn-control {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+
+.call-btn-control.active {
+  background: #ffffff;
+  color: #194e9e;
+}
+
+.end-call-btn {
+  width: 64px;
+  height: 64px;
+  background-color: #ef4444;
+  border: none;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.end-call-btn:active {
+  transform: scale(0.92);
+}
+
+.call-control-svg {
+  width: 22px;
+  height: 22px;
+}
+
+.end-call-svg {
+  width: 28px;
+  height: 28px;
 }
 </style>

@@ -823,6 +823,16 @@ const handleTarikSaldo = () => {
               </div>
               <span class="cat-chip-label">{{ cat.name }}</span>
             </button>
+
+            <!-- Lihat Semua Button -->
+            <button class="category-chip-btn see-all-chip-btn" @click="handleSwitchTab('event', 'aktif', null)">
+              <div class="cat-icon-box see-all-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cat-svg-icon">
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </div>
+              <span class="cat-chip-label">Lihat Semua</span>
+            </button>
           </div>
 
           <!-- Restored Event Cards List -->
