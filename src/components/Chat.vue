@@ -37,7 +37,11 @@ const chats = ref([
       { id: 101, text: 'Halo Afif! Selamat datang di official store Burakku.', time: '18.40', sender: 'them', status: 'read' },
       { id: 102, text: 'Ada yang bisa kami bantu mengenai Merchandise Coldplay atau Tiket Event?', time: '18.42', sender: 'them', status: 'read' },
       { id: 103, text: 'Halo kak, mau tanya t-shirt oversized Coldplay ready warna apa aja ya?', time: '18.44', sender: 'me', status: 'read' },
-      { id: 104, text: 'Permisi kak, untuk merch Coldplay ready size L dan XL ya! 😊', time: '18.45', sender: 'them', status: 'unread' }
+      { id: 104, text: 'Permisi kak, untuk merch Coldplay ready size L dan XL ya! 😊', time: '18.45', sender: 'them', status: 'unread' },
+      { id: 105, file: { name: 'e-ticket_coldplay_vip.pdf', size: '2.4 MB' }, time: '18.46', sender: 'them', status: 'read' },
+      { id: 106, file: { name: 'rundown_concert_soundrenaline.docx', size: '850 KB' }, time: '18.47', sender: 'them', status: 'read' },
+      { id: 107, file: { name: 'audio_rehearsal_sheilaon7.mp3', size: '4.1 MB' }, time: '18.48', sender: 'me', status: 'read' },
+      { id: 108, file: { name: 'teaser_video_pestapora.mp4', size: '12.8 MB' }, time: '18.49', sender: 'me', status: 'read' }
     ]
   },
   {
@@ -355,6 +359,18 @@ const handleDocUpload = (event) => {
   }, 1200);
 };
 
+const getFileTypeInfo = (filename) => {
+  if (!filename) return { ext: 'FILE', color: '#194e9e' };
+  const ext = filename.split('.').pop().toLowerCase();
+  if (['pdf'].includes(ext)) return { ext: 'PDF', color: '#ef4444' };
+  if (['doc', 'docx'].includes(ext)) return { ext: 'DOCX', color: '#2563eb' };
+  if (['mp3', 'wav', 'aac', 'flac'].includes(ext)) return { ext: 'MP3', color: '#10b981' };
+  if (['mp4', 'mkv', 'mov', 'avi'].includes(ext)) return { ext: 'MP4', color: '#8b5cf6' };
+  if (['xls', 'xlsx'].includes(ext)) return { ext: 'XLSX', color: '#059669' };
+  if (['zip', 'rar', '7z'].includes(ext)) return { ext: 'ZIP', color: '#f59e0b' };
+  return { ext: ext.toUpperCase(), color: '#194e9e' };
+};
+
 const formatCallTime = (totalSec) => {
   const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
   const s = String(totalSec % 60).padStart(2, '0');
@@ -530,10 +546,9 @@ const endVoiceCall = () => {
 
               <!-- Sent/Received File Document Preview -->
               <div v-if="msg.file" class="chat-msg-file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2" class="file-icon-svg">
-                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                  <polyline points="13 2 13 9 20 9"></polyline>
-                </svg>
+                <div class="file-ext-badge" :style="{ backgroundColor: getFileTypeInfo(msg.file.name).color }">
+                  <span>{{ getFileTypeInfo(msg.file.name).ext }}</span>
+                </div>
                 <div class="file-info-group">
                   <span class="file-name">{{ msg.file.name }}</span>
                   <span class="file-size">{{ msg.file.size }}</span>
@@ -886,6 +901,7 @@ const endVoiceCall = () => {
   width: 100%;
   height: 100vh;
   background-color: #f5faff;
+  overflow: hidden;
 }
 
 /* Smooth Slide Transition for Chat Room */
@@ -1004,6 +1020,7 @@ const endVoiceCall = () => {
 /* Messages Wall with Kolektix Theme Wallpaper Pattern */
 .messages-wall {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 14px 16px 20px 16px;
   display: flex;
@@ -1142,8 +1159,10 @@ const endVoiceCall = () => {
   align-items: center;
   gap: 8px;
   border-top: 1px solid #e2e8f0;
-  position: sticky;
-  bottom: 0;
+  position: relative;
+  margin-top: auto;
+  flex-shrink: 0;
+  width: 100%;
   z-index: 10;
 }
 
@@ -1229,31 +1248,63 @@ const endVoiceCall = () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background-color: rgba(25, 78, 158, 0.08);
   padding: 8px 12px;
   border-radius: 8px;
   margin-bottom: 4px;
 }
 
-.file-icon-svg {
-  width: 24px;
-  height: 24px;
+.sent-by-me .chat-msg-file {
+  background-color: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.received-by-them .chat-msg-file {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.file-ext-badge {
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
 .file-info-group {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
-.file-name {
-  font-size: 12px;
+.sent-by-me .file-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffffff !important;
+  word-break: break-all;
+}
+
+.sent-by-me .file-size {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.received-by-them .file-name {
+  font-size: 12.5px;
   font-weight: 600;
   color: #0f172a;
   word-break: break-all;
 }
 
-.file-size {
+.received-by-them .file-size {
   font-size: 10px;
   color: #64748b;
 }
@@ -1289,14 +1340,14 @@ const endVoiceCall = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(180deg, #0f172a 0%, #194e9e 100%);
+  background: linear-gradient(180deg, #194e9e 0%, #0c2d60 100%);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   color: #ffffff;
-  padding: 40px 20px;
+  padding: 60px 20px 40px 20px;
 }
 
 .call-card-content {
@@ -1305,6 +1356,8 @@ const endVoiceCall = () => {
   align-items: center;
   width: 100%;
   max-width: 320px;
+  height: 100%;
+  justify-content: space-between;
 }
 
 .call-avatar-wrapper {
@@ -1354,7 +1407,7 @@ const endVoiceCall = () => {
 .call-status-timer {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.85);
-  margin-bottom: 60px;
+  margin-bottom: 20px;
   font-weight: 500;
 }
 
@@ -1364,6 +1417,8 @@ const endVoiceCall = () => {
   justify-content: center;
   gap: 28px;
   width: 100%;
+  margin-top: auto;
+  padding-bottom: 20px;
 }
 
 .call-btn-control {
