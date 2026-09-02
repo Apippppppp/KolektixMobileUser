@@ -104,7 +104,13 @@ const filteredTransactions = computed(() => {
         <div class="card-body-row">
           <img :src="item.image" :alt="item.eventTitle" class="transaksi-event-img" />
           <div class="transaksi-event-info">
-            <h4 class="transaksi-event-title">{{ item.eventTitle }}</h4>
+            <div class="event-title-wrapper">
+              <div v-if="item.eventTitle && item.eventTitle.length > 20" class="event-title-marquee">
+                <h4 class="transaksi-event-title">{{ item.eventTitle }}</h4>
+                <h4 class="transaksi-event-title" aria-hidden="true">{{ item.eventTitle }}</h4>
+              </div>
+              <h4 v-else class="transaksi-event-title static">{{ item.eventTitle }}</h4>
+            </div>
             <span class="transaksi-organizer">{{ item.organizer }}</span>
             <span class="transaksi-ticket-type">{{ item.ticketCategory }}</span>
             <span class="transaksi-date-text">{{ item.date }}</span>
@@ -265,12 +271,41 @@ const filteredTransactions = computed(() => {
   flex: 1;
 }
 
+.event-title-wrapper {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.event-title-marquee {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: cardTitleMarquee 12s linear infinite;
+  will-change: transform;
+}
+
 .transaksi-event-title {
   font-size: 12px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
   line-height: 1.3;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 18px;
+}
+
+.transaksi-event-title.static {
+  padding-right: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes cardTitleMarquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
 }
 
 .transaksi-organizer {

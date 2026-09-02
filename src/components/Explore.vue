@@ -78,7 +78,13 @@ const filteredEvents = computed(() => {
           </div>
 
           <div class="explore-card-body">
-            <h4 class="explore-event-title">{{ event.title }}</h4>
+            <div class="event-title-wrapper">
+              <div v-if="event.title && event.title.length > 18" class="event-title-marquee">
+                <h4 class="explore-event-title">{{ event.title }}</h4>
+                <h4 class="explore-event-title" aria-hidden="true">{{ event.title }}</h4>
+              </div>
+              <h4 v-else class="explore-event-title static">{{ event.title }}</h4>
+            </div>
             <span class="explore-organizer">{{ event.organizer }}</span>
             <div class="explore-meta-row">
               <span class="meta-item">📍 {{ event.location || 'Jakarta' }}</span>
@@ -261,14 +267,40 @@ const filteredEvents = computed(() => {
   flex: 1;
 }
 
+.event-title-wrapper {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.event-title-marquee {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: cardTitleMarquee 12s linear infinite;
+  will-change: transform;
+}
+
 .explore-event-title {
   font-size: 12px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
   white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 18px;
+}
+
+.explore-event-title.static {
+  padding-right: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@keyframes cardTitleMarquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
 }
 
 .explore-organizer {

@@ -116,7 +116,13 @@ const handleCreateEvent = () => {
 
             <!-- Card Info -->
             <div class="card-info">
-              <h3 class="event-card-title">{{ event.title }}</h3>
+              <div class="event-title-wrapper">
+                <div v-if="event.title && event.title.length > 20" class="event-title-marquee">
+                  <h3 class="event-card-title">{{ event.title }}</h3>
+                  <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
+                </div>
+                <h3 v-else class="event-card-title static">{{ event.title }}</h3>
+              </div>
 
               <div class="creator-profile-row">
                 <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
@@ -132,14 +138,26 @@ const handleCreateEvent = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                   <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
                 </svg>
-                <span class="meta-text">{{ event.location }}</span>
+                <div class="meta-text-wrapper">
+                  <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
+                    <span class="meta-text">{{ event.location }}</span>
+                    <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
+                  </div>
+                  <span v-else class="meta-text static">{{ event.location }}</span>
+                </div>
               </div>
 
               <div class="meta-row" v-if="event.date">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                   <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
                 </svg>
-                <span class="meta-text">{{ event.date }}</span>
+                <div class="meta-text-wrapper">
+                  <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
+                    <span class="meta-text">{{ event.date }}</span>
+                    <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
+                  </div>
+                  <span v-else class="meta-text static">{{ event.date }}</span>
+                </div>
               </div>
 
               <div class="price-row">
@@ -299,24 +317,52 @@ const handleCreateEvent = () => {
 .status-dot { width: 6px; height: 6px; border-radius: 50%; }
 
 .card-info { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.event-title-wrapper {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.event-title-marquee {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: cardTitleMarquee 12s linear infinite;
+  will-change: transform;
+}
+
 .event-card-title {
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 4px 0;
+  margin: 0;
   white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 18px;
+}
+
+.event-card-title.static {
+  padding-right: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
+}
+
+@keyframes cardTitleMarquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
 }
 .creator-profile-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 .creator-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
 .creator-name { font-size: 12px; font-weight: 500; color: #475569; }
 .verified-badge { color: #194E9E; display: flex; align-items: center; }
 .verified-check-svg { width: 14px; height: 14px; }
-.meta-row { display: flex; align-items: center; gap: 6px; }
-.meta-icon { width: 14px; height: 14px; color: #194E9E; }
-.meta-text { font-size: 12px; color: #475569; }
+.meta-row { display: flex; align-items: center; gap: 6px; overflow: hidden; width: 100%; }
+.meta-icon { width: 14px; height: 14px; color: #194E9E; flex-shrink: 0; }
+.meta-text-wrapper { flex: 1; overflow: hidden; white-space: nowrap; position: relative; min-width: 0; }
+.meta-text-marquee { display: inline-flex; align-items: center; white-space: nowrap; animation: metaTextMarquee 12s linear infinite; will-change: transform; }
+.meta-text { font-size: 12px; color: #475569; white-space: nowrap; flex-shrink: 0; padding-right: 18px; }
+.meta-text.static { padding-right: 0; overflow: hidden; text-overflow: ellipsis; }
 .price-row { margin-top: 4px; margin-bottom: 4px; }
 .event-card-price { font-size: 16px; font-weight: 700; color: #0f172a; }
 

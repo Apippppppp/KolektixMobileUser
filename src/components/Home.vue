@@ -198,6 +198,52 @@ const startMostPopularInterval = () => {
   }, 3000);
 };
 
+// CTA Banner Slider Logic
+const ctaSlideIndex = ref(0);
+const ctaSlides = ref([
+  { id: 1, image: '/media/cta.avif' },
+  { id: 2, image: '/media/cta.avif' },
+  { id: 3, image: '/media/cta.avif' }
+]);
+let ctaInterval = null;
+
+const startCtaInterval = () => {
+  if (ctaInterval) clearInterval(ctaInterval);
+  ctaInterval = setInterval(() => {
+    ctaSlideIndex.value = (ctaSlideIndex.value + 1) % ctaSlides.value.length;
+  }, 4000);
+};
+
+const ctaStartX = ref(0);
+const ctaCurrentTranslate = ref(0);
+const ctaIsDragging = ref(false);
+
+const handleCtaDragStart = (e) => {
+  ctaIsDragging.value = true;
+  ctaStartX.value = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+  if (ctaInterval) clearInterval(ctaInterval);
+};
+
+const handleCtaDragMove = (e) => {
+  if (!ctaIsDragging.value) return;
+  const currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+  ctaCurrentTranslate.value = currentX - ctaStartX.value;
+};
+
+const handleCtaDragEnd = () => {
+  if (!ctaIsDragging.value) return;
+  ctaIsDragging.value = false;
+  
+  if (ctaCurrentTranslate.value < -30) {
+    ctaSlideIndex.value = (ctaSlideIndex.value + 1) % ctaSlides.value.length;
+  } else if (ctaCurrentTranslate.value > 30) {
+    ctaSlideIndex.value = (ctaSlideIndex.value - 1 + ctaSlides.value.length) % ctaSlides.value.length;
+  }
+  
+  ctaCurrentTranslate.value = 0;
+  startCtaInterval();
+};
+
 const sadAnimation = ref(null);
 onMounted(async () => {
   const res = await fetch('/media/sad emotion.json');
@@ -205,12 +251,14 @@ onMounted(async () => {
   startSliderInterval();
   startComingSoonInterval();
   startMostPopularInterval();
+  startCtaInterval();
 });
 
 onUnmounted(() => {
   if (sliderInterval) clearInterval(sliderInterval);
   if (comingSoonInterval) clearInterval(comingSoonInterval);
   if (mostPopularInterval) clearInterval(mostPopularInterval);
+  if (ctaInterval) clearInterval(ctaInterval);
 });
 
 // Drag / Swipe Logic for Slider
@@ -539,6 +587,56 @@ const mostPopularEvents = ref([
   }
 ]);
 
+const cityList = ref([
+  { id: 'jakarta', name: 'Jakarta' },
+  { id: 'bandung', name: 'Bandung' },
+  { id: 'yogyakarta', name: 'Yogyakarta' },
+  { id: 'surabaya', name: 'Surabaya' },
+  { id: 'bali', name: 'Bali' },
+  { id: 'medan', name: 'Medan' },
+  { id: 'semarang', name: 'Semarang' },
+  { id: 'makassar', name: 'Makassar' }
+]);
+
+const merchList = ref([
+  {
+    id: 1,
+    title: 'Coldplay Spheres Oversized T-Shirt',
+    organizer: 'Burakku',
+    creatorLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=120&q=80',
+    price: 'Rp285.000',
+    image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+    badge: 'BESTSELLER'
+  },
+  {
+    id: 2,
+    title: 'The Script Satellites Heavyweight Hoodie',
+    organizer: 'The Script Official',
+    creatorLogo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+    price: 'Rp450.000',
+    image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=600&q=80',
+    badge: 'LIMITED'
+  },
+  {
+    id: 3,
+    title: 'Soundrenaline 2024 Canvas Tote Bag',
+    organizer: 'Soundrenaline Official',
+    creatorLogo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+    price: 'Rp115.000',
+    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80',
+    badge: 'NEW'
+  },
+  {
+    id: 4,
+    title: 'Pesta Pora Exclusive Snapback Cap',
+    organizer: 'Pesta Pora Official',
+    creatorLogo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80',
+    price: 'Rp175.000',
+    image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=600&q=80',
+    badge: 'HOT'
+  }
+]);
+
 const handleTarikSaldo = () => {
   alert('Penarikan saldo sedang diproses');
 };
@@ -720,7 +818,13 @@ const handleTarikSaldo = () => {
 
               <!-- Card Info Area -->
               <div class="card-info">
-                <h3 class="event-card-title">{{ event.title }}</h3>
+                <div class="event-title-wrapper">
+                  <div v-if="event.title && event.title.length > 20" class="event-title-marquee">
+                    <h3 class="event-card-title">{{ event.title }}</h3>
+                    <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
+                  </div>
+                  <h3 v-else class="event-card-title static">{{ event.title }}</h3>
+                </div>
                 
                 <!-- Creator Profile & Verified Badge Row -->
                 <div class="creator-profile-row">
@@ -737,14 +841,26 @@ const handleTarikSaldo = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                     <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
                   </svg>
-                  <span class="meta-text">{{ event.location }}</span>
+                  <div class="meta-text-wrapper">
+                    <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
+                      <span class="meta-text">{{ event.location }}</span>
+                      <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
+                    </div>
+                    <span v-else class="meta-text static">{{ event.location }}</span>
+                  </div>
                 </div>
 
                 <div class="meta-row" v-if="event.date">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                     <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
                   </svg>
-                  <span class="meta-text">{{ event.date }}</span>
+                  <div class="meta-text-wrapper">
+                    <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
+                      <span class="meta-text">{{ event.date }}</span>
+                      <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
+                    </div>
+                    <span v-else class="meta-text static">{{ event.date }}</span>
+                  </div>
                 </div>
 
                 <div class="price-row">
@@ -790,7 +906,13 @@ const handleTarikSaldo = () => {
 
                     <!-- Card Info Area -->
                     <div class="card-info">
-                      <h3 class="event-card-title">{{ event.title }}</h3>
+                      <div class="event-title-wrapper">
+                        <div v-if="event.title && event.title.length > 22" class="event-title-marquee">
+                          <h3 class="event-card-title">{{ event.title }}</h3>
+                          <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
+                        </div>
+                        <h3 v-else class="event-card-title static">{{ event.title }}</h3>
+                      </div>
                       
                       <!-- Creator Profile & Verified Badge Row -->
                       <div class="creator-profile-row">
@@ -807,14 +929,26 @@ const handleTarikSaldo = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                           <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
                         </svg>
-                        <span class="meta-text">{{ event.location }}</span>
+                        <div class="meta-text-wrapper">
+                          <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
+                            <span class="meta-text">{{ event.location }}</span>
+                            <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
+                          </div>
+                          <span v-else class="meta-text static">{{ event.location }}</span>
+                        </div>
                       </div>
 
                       <div class="meta-row" v-if="event.date">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                           <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
                         </svg>
-                        <span class="meta-text">{{ event.date }}</span>
+                        <div class="meta-text-wrapper">
+                          <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
+                            <span class="meta-text">{{ event.date }}</span>
+                            <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
+                          </div>
+                          <span v-else class="meta-text static">{{ event.date }}</span>
+                        </div>
                       </div>
 
                       <div class="price-row">
@@ -860,7 +994,13 @@ const handleTarikSaldo = () => {
 
               <!-- Card Info Area -->
               <div class="card-info">
-                <h3 class="event-card-title">{{ event.title }}</h3>
+                <div class="event-title-wrapper">
+                  <div v-if="event.title && event.title.length > 20" class="event-title-marquee">
+                    <h3 class="event-card-title">{{ event.title }}</h3>
+                    <h3 class="event-card-title" aria-hidden="true">{{ event.title }}</h3>
+                  </div>
+                  <h3 v-else class="event-card-title static">{{ event.title }}</h3>
+                </div>
                 
                 <div class="creator-profile-row">
                   <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
@@ -876,14 +1016,26 @@ const handleTarikSaldo = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                     <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.343 7.587.829.799 1.655 1.381 2.274 1.765.31.193.57.337.757.433.107.054.2.096.28.14a.515.515 0 0 0 .036.017l.006.003ZM10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
                   </svg>
-                  <span class="meta-text">{{ event.location }}</span>
+                  <div class="meta-text-wrapper">
+                    <div v-if="event.location && event.location.length > 22" class="meta-text-marquee">
+                      <span class="meta-text">{{ event.location }}</span>
+                      <span class="meta-text" aria-hidden="true">{{ event.location }}</span>
+                    </div>
+                    <span v-else class="meta-text static">{{ event.location }}</span>
+                  </div>
                 </div>
 
                 <div class="meta-row" v-if="event.date">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="meta-icon">
                     <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
                   </svg>
-                  <span class="meta-text">{{ event.date }}</span>
+                  <div class="meta-text-wrapper">
+                    <div v-if="event.date && event.date.length > 22" class="meta-text-marquee">
+                      <span class="meta-text">{{ event.date }}</span>
+                      <span class="meta-text" aria-hidden="true">{{ event.date }}</span>
+                    </div>
+                    <span v-else class="meta-text static">{{ event.date }}</span>
+                  </div>
                 </div>
 
                 <div class="price-row">
@@ -924,7 +1076,13 @@ const handleTarikSaldo = () => {
                     <div class="mp-single-badge">{{ event.badge }}</div>
                     <div class="mp-single-overlay">
                       <div class="mp-single-info">
-                        <h4 class="mp-single-title">{{ event.title }}</h4>
+                        <div class="event-title-wrapper">
+                          <div v-if="event.title && event.title.length > 24" class="event-title-marquee">
+                            <h4 class="mp-single-title">{{ event.title }}</h4>
+                            <h4 class="mp-single-title" aria-hidden="true">{{ event.title }}</h4>
+                          </div>
+                          <h4 v-else class="mp-single-title static">{{ event.title }}</h4>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -961,6 +1119,159 @@ const handleTarikSaldo = () => {
               >
                 {{ creator.isFollowing ? 'Mengikuti' : 'Ikuti' }}
               </button>
+            </div>
+          </div>
+
+          <!-- CTA Image Slider Section (Right below Para Kreator) -->
+          <div 
+            class="cta-banner-slider-wrapper"
+            @touchstart="handleCtaDragStart"
+            @touchmove="handleCtaDragMove"
+            @touchend="handleCtaDragEnd"
+            @mousedown="handleCtaDragStart"
+            @mousemove="handleCtaDragMove"
+            @mouseup="handleCtaDragEnd"
+            @mouseleave="handleCtaDragEnd"
+          >
+            <div 
+              class="cta-banner-slider"
+              @click="activeTab = 'create-event'"
+            >
+              <div 
+                class="cta-banner-track"
+                :style="{ transform: `translateX(-${ctaSlideIndex * 100}%)`, transition: 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)' }"
+              >
+                <div 
+                  v-for="(slide, index) in ctaSlides" 
+                  :key="index" 
+                  class="cta-banner-slide"
+                >
+                  <img :src="slide.image" alt="Buat Event Baru CTA" class="cta-banner-img" draggable="false" />
+                </div>
+              </div>
+
+              <!-- Pagination Dots Indicator -->
+              <div class="cta-banner-dots" @click.stop>
+                <span 
+                  v-for="(slide, index) in ctaSlides" 
+                  :key="index" 
+                  class="cta-dot" 
+                  :class="{ active: ctaSlideIndex === index }"
+                  @click="ctaSlideIndex = index"
+                ></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Event Berdasarkan Kota / Daerah (Single Horizontal Scroll Line) -->
+          <div class="top-events-header extra-section-header city-section-header">
+            <h2 class="top-events-title">Event di Kota Kamu</h2>
+          </div>
+
+          <div class="city-scroll-list">
+            <div 
+              v-for="city in cityList" 
+              :key="city.id" 
+              class="city-card"
+              @click="handleSwitchTab('event', 'aktif', city.name)"
+            >
+              <div class="city-icon-wrapper">
+                <!-- Jakarta (Monas) -->
+                <svg v-if="city.id === 'jakarta'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <path d="M12 2C11.3 3.1 11.5 4.3 12 5C12.5 4.3 12.7 3.1 12 2Z"/>
+                  <path d="M9.5 5.5H14.5L14 11H10L9.5 5.5Z"/>
+                  <path d="M8 11.5H16L17.5 17H6.5L8 11.5Z"/>
+                  <path d="M4 17.5H20V21H4V17.5Z"/>
+                </svg>
+
+                <!-- Bandung (Gedung Sate) -->
+                <svg v-else-if="city.id === 'bandung'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <path d="M11.5 2h1v3.5h-1z"/>
+                  <circle cx="12" cy="2.5" r="1"/>
+                  <path d="M7 7.5l5-3 5 3v2H7v-2z"/>
+                  <path d="M5 11h14v3H5v-3z"/>
+                  <path d="M3 15h18v6H3v-6z"/>
+                </svg>
+
+                <!-- Yogyakarta (Tugu Jogja) -->
+                <svg v-else-if="city.id === 'yogyakarta'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <circle cx="12" cy="3" r="1.5"/>
+                  <path d="M11 5h2l.7 7h-3.4L11 5z"/>
+                  <path d="M9.5 12.5h5l.5 4.5h-6l.5-4.5z"/>
+                  <path d="M6 17.5h12V21H6v-3.5z"/>
+                </svg>
+
+                <!-- Surabaya (Tugu Pahlawan) -->
+                <svg v-else-if="city.id === 'surabaya'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <path d="M11.5 2h1l1 14h-3l1-14z"/>
+                  <path d="M8 16.5h8v2H8v-2z"/>
+                  <path d="M5 19h14v2H5v-2z"/>
+                </svg>
+
+                <!-- Bali / Denpasar (Candi Bentar Gate) -->
+                <svg v-else-if="city.id === 'bali'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <path d="M4 21V11l2-2V7l2-2V3h2v18H4z"/>
+                  <path d="M20 21V11l-2-2V7l-2-2V3h-2v18h6z"/>
+                  <path d="M2 20h20v1H2v-1z"/>
+                </svg>
+
+                <!-- Medan (Istana Maimun / Dome) -->
+                <svg v-else-if="city.id === 'medan'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <path d="M12 2c-.3 0-.5.2-.5.5v1.5h1V2.5c0-.3-.2-.5-.5-.5z"/>
+                  <path d="M12 4c-3.3 0-6 2.5-6 6h12c0-3.5-2.7-6-6-6z"/>
+                  <path d="M4 11h16v10H4V11z"/>
+                </svg>
+
+                <!-- Semarang (Lawang Sewu) -->
+                <svg v-else-if="city.id === 'semarang'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <path d="M3 21V9l9-6 9 6v12H3zm3-2h3v-6a1.5 1.5 0 0 0-3 0v6zm6 0h3v-6a1.5 1.5 0 0 0-3 0v6z"/>
+                </svg>
+
+                <!-- Makassar (Kapal Phinisi) -->
+                <svg v-else-if="city.id === 'makassar'" viewBox="0 0 24 24" fill="#194e9e" xmlns="http://www.w3.org/2000/svg" class="city-icon-svg">
+                  <path d="M11 3v12L4 15l7-12zM13 5v10l7-2-7-8z"/>
+                  <path d="M2 17l3 4h14l3-4H2z"/>
+                </svg>
+              </div>
+              <span class="city-card-name">{{ city.name }}</span>
+            </div>
+          </div>
+
+          <!-- Section Official Merchandise (Right below City Cards) -->
+          <div class="top-events-header extra-section-header">
+            <h2 class="top-events-title">Merchandise Official</h2>
+          </div>
+
+          <div class="merch-scroll-list">
+            <div 
+              v-for="merch in merchList" 
+              :key="merch.id" 
+              class="merch-card"
+              @click="handleSwitchTab('event', 'aktif', null)"
+            >
+              <div class="merch-thumb-wrapper">
+                <img :src="merch.image" :alt="merch.title" class="merch-thumb" />
+                <span v-if="merch.badge" class="merch-badge">{{ merch.badge }}</span>
+              </div>
+              <div class="merch-info">
+                <div class="event-title-wrapper">
+                  <div v-if="merch.title && merch.title.length > 20" class="event-title-marquee">
+                    <h4 class="merch-title">{{ merch.title }}</h4>
+                    <h4 class="merch-title" aria-hidden="true">{{ merch.title }}</h4>
+                  </div>
+                  <h4 v-else class="merch-title static">{{ merch.title }}</h4>
+                </div>
+
+                <div class="merch-creator-row">
+                  <img :src="merch.creatorLogo" :alt="merch.organizer" class="merch-creator-avatar" />
+                  <div class="merch-creator-text-group">
+                    <span class="merch-creator-label">Disediakan oleh</span>
+                    <span class="merch-creator-name">{{ merch.organizer }}</span>
+                  </div>
+                </div>
+
+                <span class="merch-price">{{ merch.price }}</span>
+              </div>
             </div>
           </div>
 
@@ -1833,6 +2144,9 @@ const handleTarikSaldo = () => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  width: 100%;
+  max-width: 230px;
+  overflow: hidden;
 }
 
 .mp-single-title {
@@ -1841,9 +2155,13 @@ const handleTarikSaldo = () => {
   color: #ffffff;
   margin: 0;
   white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 18px;
+}
+.mp-single-title.static {
+  padding-right: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 210px;
 }
 
 
@@ -1996,15 +2314,44 @@ const handleTarikSaldo = () => {
   gap: 4px;
 }
 
+.event-title-wrapper {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.event-title-marquee {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: cardTitleMarquee 12s linear infinite;
+  will-change: transform;
+}
+
 .event-card-title {
   font-size: 15px;
   font-weight: 700;
   color: var(--dark);
   line-height: 1.4;
   white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 18px;
+}
+
+.event-card-title.static {
+  padding-right: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
+}
+
+@keyframes cardTitleMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 /* Creator Profile & Verified Checkmark badge */
@@ -2046,19 +2393,56 @@ const handleTarikSaldo = () => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--dark); /* Black color text */
+  color: var(--dark);
   margin-top: 2px;
+  overflow: hidden;
+  width: 100%;
 }
 
 .meta-icon {
   width: 14px;
   height: 14px;
-  color: var(--primary-base); /* Blue color icons */
+  color: var(--primary-base);
+  flex-shrink: 0;
+}
+
+.meta-text-wrapper {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  min-width: 0;
+}
+
+.meta-text-marquee {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: metaTextMarquee 12s linear infinite;
+  will-change: transform;
 }
 
 .meta-text {
   font-size: 12px;
-  color: var(--dark); /* Black color text, not bold/uppercase */
+  color: var(--dark);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 18px;
+}
+
+.meta-text.static {
+  padding-right: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes metaTextMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 .price-row {
@@ -3818,9 +4202,9 @@ const handleTarikSaldo = () => {
 }
 
 .navbar-header.navbar-home.navbar-scrolled {
-  background-color: #194e9e;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 14px rgba(25, 78, 158, 0.25);
+  background-color: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
 }
 
@@ -3863,7 +4247,7 @@ const handleTarikSaldo = () => {
 }
 
 .navbar-scrolled .menu-lines-icon {
-  color: #ffffff;
+  color: #194e9e;
 }
 
 .account-text-info {
@@ -3879,7 +4263,7 @@ const handleTarikSaldo = () => {
 }
 
 .navbar-scrolled .account-name {
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .account-subtitle {
@@ -3890,7 +4274,7 @@ const handleTarikSaldo = () => {
 }
 
 .navbar-scrolled .account-subtitle {
-  color: #a5c7f8;
+  color: #64748b;
 }
 
 .nav-right-actions {
@@ -3923,7 +4307,7 @@ const handleTarikSaldo = () => {
 }
 
 .navbar-scrolled .header-action-icon {
-  color: #ffffff;
+  color: #194e9e;
 }
 
 .notification-badge-dot {
@@ -3934,7 +4318,7 @@ const handleTarikSaldo = () => {
   height: 7px;
   background-color: #16a34a;
   border-radius: 50%;
-  border: 1.5px solid #194e9e;
+  border: 1.5px solid #ffffff;
 }
 
 .home-search-bar {
@@ -4089,5 +4473,319 @@ const handleTarikSaldo = () => {
   .slider-container {
     height: 70px;
   }
+}
+
+/* ===== CTA BANNER SLIDER STYLES ===== */
+.cta-banner-slider-wrapper {
+  margin-top: 18px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.cta-banner-slider {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07);
+  cursor: pointer;
+  background-color: #f8fafc;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cta-banner-slider:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.1);
+}
+
+.cta-banner-slider:active {
+  transform: scale(0.985);
+}
+
+.cta-banner-track {
+  display: flex;
+  width: 100%;
+}
+
+.cta-banner-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+}
+
+.cta-banner-img {
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.cta-banner-dots {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 3px 6px;
+  border-radius: 12px;
+}
+
+.cta-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cta-dot.active {
+  width: 10px;
+  border-radius: 4px;
+  background-color: #194e9e;
+}
+
+/* ===== CITY EVENT DISCOVERY STYLES ===== */
+.city-section-header {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.city-scroll-list {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 2px 0 6px 0;
+  margin-top: 0px;
+  margin-bottom: 18px;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+}
+
+.city-scroll-list::-webkit-scrollbar {
+  display: none;
+}
+
+.city-card {
+  flex: 0 0 auto;
+  min-width: 68px;
+  background-color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.city-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.city-card:active {
+  transform: scale(0.96);
+}
+
+.city-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f0f6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.city-card:hover .city-icon-wrapper {
+  background-color: #e2eefe;
+}
+
+.city-icon-svg {
+  width: 22px;
+  height: 22px;
+}
+
+.city-card-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+/* ===== MERCH CARD SECTION STYLES ===== */
+.merch-scroll-list {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0 10px 0;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+}
+
+.merch-scroll-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== MERCH CARD SECTION STYLES ===== */
+.merch-scroll-list {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 12px 0;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+}
+
+.merch-scroll-list::-webkit-scrollbar {
+  display: none;
+}
+
+.merch-card {
+  flex: 0 0 100%;
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.merch-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.merch-thumb-wrapper {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  background-color: #f8fafc;
+  overflow: hidden;
+}
+
+.merch-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.merch-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: #194e9e;
+  color: #ffffff;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.merch-info {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.merch-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 18px;
+}
+
+.merch-title.static {
+  padding-right: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.merch-creator-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.merch-creator-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.merch-creator-text-group {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.merch-creator-label {
+  font-size: 9.5px;
+  color: #000000;
+  font-weight: 400;
+}
+
+.merch-creator-name {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.merch-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: #000000;
+  margin-top: 2px;
 }
 </style>
