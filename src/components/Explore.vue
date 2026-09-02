@@ -14,7 +14,7 @@ const activeCategory = ref('Semua');
 const categories = ['Semua', 'Konser Musik', 'Pameran Art', 'Workshop', 'Festival', 'Olahraga'];
 
 const filteredEvents = computed(() => {
-  let list = props.events;
+  let list = (props.events || []).filter(e => e.status !== 'Draft');
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase();
     list = list.filter(e => e.title.toLowerCase().includes(q) || e.organizer.toLowerCase().includes(q) || (e.location && e.location.toLowerCase().includes(q)));

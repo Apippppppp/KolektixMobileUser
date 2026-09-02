@@ -43,6 +43,9 @@ const baseFilteredEvents = computed(() => {
     list = list.filter(e => e.status === 'Draft');
   } else if (currentFilter.value === 'lalu') {
     list = list.filter(e => e.status === 'Ended');
+  } else {
+    // Default 'semua' tab: Hide Draft events from user public display
+    list = list.filter(e => e.status !== 'Draft');
   }
 
   if (selectedCategory.value !== 'Semua') {
