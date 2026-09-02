@@ -513,12 +513,14 @@ const closeTicketModal = () => {
   flex-direction: column;
   gap: 20px;
   padding: 16px 0 110px 0;
+  touch-action: pan-y;
 }
 
 .home-section-group {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  touch-action: pan-y;
 }
 
 .top-events-header {
@@ -630,7 +632,7 @@ const closeTicketModal = () => {
   overflow-x: auto;
   padding: 4px 16px 12px 16px;
   scrollbar-width: none;
-  touch-action: pan-x pan-y;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -650,13 +652,15 @@ const closeTicketModal = () => {
   flex-direction: column;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
   cursor: pointer;
-  touch-action: pan-x pan-y;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.home-card-style:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+@media (hover: hover) {
+  .home-card-style:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  }
 }
 
 .card-thumbnail-wrapper {
@@ -664,12 +668,16 @@ const closeTicketModal = () => {
   width: 100%;
   height: 140px;
   background-color: #f1f5f9;
+  pointer-events: none;
 }
 
 .event-thumbnail {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .status-badge {
