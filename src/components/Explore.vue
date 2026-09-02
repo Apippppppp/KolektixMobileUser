@@ -283,7 +283,7 @@ const filteredEvents = computed(() => {
 }
 
 .explore-card-body {
-  padding: 8px 4px;
+  padding: 8px 0 4px 0;
   display: flex;
   flex-direction: column;
   gap: 4px;

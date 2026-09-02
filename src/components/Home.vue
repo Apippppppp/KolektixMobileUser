@@ -2083,7 +2083,7 @@ onMounted(() => {
 .top-events-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--dark);
+  color: #151416;
   margin: 0;
 }
 
@@ -2570,10 +2570,11 @@ onMounted(() => {
 }
 
 .card-info {
-  padding: 10px 6px;
+  padding: 10px 0 4px 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
 }
 
 .event-title-wrapper {

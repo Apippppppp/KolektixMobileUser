@@ -673,7 +673,7 @@ const closeTicketModal = () => {
 .status-badge.ended .status-dot { background-color: #64748b; }
 
 .card-info {
-  padding: 10px 6px;
+  padding: 10px 0 4px 0;
   display: flex;
   flex-direction: column;
   gap: 4px;

@@ -666,12 +666,6 @@ const openLocationMaps = () => {
           <span class="status-badge live">LIVE</span>
         </div>
 
-        <!-- Creator Profile Row (Black Text) -->
-        <div class="creator-profile-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <img :src="event.creatorLogo || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80'" alt="Creator Logo" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
-          <span style="font-size: 12px; font-weight: 600; color: #000000;">{{ event.organizer || 'Maxpaincompany LTD' }}</span>
-        </div>
-        
         <!-- Metadata rows matching exact layout -->
         <div class="event-meta-details">
           <div class="meta-detail-row">
@@ -708,6 +702,23 @@ const openLocationMaps = () => {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 21 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
               </svg>
             </button>
+          </div>
+        </div>
+
+        <!-- Divider Line -->
+        <div class="creator-divider-line"></div>
+
+        <!-- Creator Profile Row (Below Divider) -->
+        <div class="creator-profile-row" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+          <img :src="event.creatorLogo || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80'" alt="Creator Logo" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
+          <div style="display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 9px; font-weight: 400; color: #494a4a;">Diselenggarakan oleh:</span>
+            <div style="display: flex; align-items: center; gap: 3px;">
+              <span style="font-size: 12px; font-weight: 500; color: #151416;">{{ event.organizer || 'Maxpaincompany LTD' }}</span>
+              <svg viewBox="0 0 24 24" fill="#2196F3" style="width: 12px; height: 12px; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
@@ -1841,8 +1852,8 @@ const openLocationMaps = () => {
 
 .header-title {
   font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 600;
+  color:#151416;
   margin: 0;
 }
 
@@ -1858,7 +1869,7 @@ const openLocationMaps = () => {
 
 .scrolled-event-title {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #0f172a;
   margin: 0;
   white-space: nowrap;
@@ -1870,7 +1881,7 @@ const openLocationMaps = () => {
 .scrolled-event-meta {
   font-size: 10px;
   font-weight: 500;
-  color: #000000;
+  color: #494a4a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2073,8 +2084,8 @@ const openLocationMaps = () => {
 
 .event-title-text {
   font-size: 22px;
-  font-weight: 600;
-  color: #000000;
+  font-weight: 500;
+  color:  #151416;
   line-height: 1.3;
 }
 
@@ -2098,8 +2109,15 @@ const openLocationMaps = () => {
 .event-meta-details {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 16px 0;
+  gap: 8px; /* Tightened gap */
+  margin: 10px 0 8px 0;
+}
+
+.creator-divider-line {
+  height: 1px;
+  background-color: #f1f5f9;
+  width: 100%;
+  margin-top: 4px;
 }
 
 .meta-detail-row {
@@ -2511,7 +2529,7 @@ const openLocationMaps = () => {
 
 .end-date-value {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   color: #0f172a;
 }
 
@@ -3074,13 +3092,13 @@ const openLocationMaps = () => {
 .bottom-bar-label {
   font-size: 11px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .bottom-bar-price-val {
   font-size: 17px;
   font-weight: 800;
-  color: #0f172a;
+  color:  #151416;
   line-height: 1.2;
 }
 
