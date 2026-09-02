@@ -472,15 +472,17 @@ const closeTicketModal = () => {
 /* CATEGORIES PILLS BAR */
 .category-pills-bar {
   background-color: #ffffff;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .pills-scroll-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   overflow-x: auto;
   scrollbar-width: none;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pills-scroll-row::-webkit-scrollbar {
@@ -491,13 +493,14 @@ const closeTicketModal = () => {
   background-color: #f1f5f9;
   color: #475569;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 5px 14px;
-  font-size: 11.5px;
+  border-radius: 24px;
+  padding: 8px 18px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .cat-pill-btn.active {
@@ -632,7 +635,7 @@ const closeTicketModal = () => {
   overflow-x: auto;
   padding: 4px 16px 12px 16px;
   scrollbar-width: none;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -652,7 +655,7 @@ const closeTicketModal = () => {
   flex-direction: column;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
   cursor: pointer;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
   -webkit-tap-highlight-color: transparent;
 }
 
