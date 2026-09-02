@@ -197,12 +197,14 @@ const filteredChats = computed(() => {
 const openChatRoom = (chat) => {
   activeChat.value = chat;
   chat.unread = 0;
+  document.body.classList.add('chat-room-open');
   emit('room-toggle', true);
   scrollToBottom();
 };
 
 const closeChatRoom = () => {
   activeChat.value = null;
+  document.body.classList.remove('chat-room-open');
   emit('room-toggle', false);
 };
 
@@ -895,13 +897,18 @@ const endVoiceCall = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 100;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: 100vw;
   height: 100vh;
+  height: 100dvh;
+  max-width: 100%;
   background-color: #f5faff;
   overflow: hidden;
+  touch-action: pan-y;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Smooth Slide Transition for Chat Room */
@@ -1022,10 +1029,14 @@ const endVoiceCall = () => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 14px 16px 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background-color: #f5faff;
   background-image: radial-gradient(rgba(25, 78, 158, 0.12) 1.2px, transparent 1.2px),
                     radial-gradient(rgba(25, 78, 158, 0.12) 1.2px, #f5faff 1.2px);

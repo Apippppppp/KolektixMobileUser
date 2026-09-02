@@ -42,6 +42,15 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body.chat-room-open, html.chat-room-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: pan-y !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 @media (max-width: 480px) {
   body {
     background-color: var(--white);
