@@ -429,6 +429,7 @@ const handleLogoUpload = (event) => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  margin-top: 18px;
   margin-bottom: 16px;
 }
 
