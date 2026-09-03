@@ -146,6 +146,7 @@ const displayEvent = computed(() => {
 
 // Accordion states
 const isVoucherExpanded = ref(false);
+const isOrdererExpanded = ref(true);
 
 // Form data pemesan
 const ordererForm = ref({
@@ -511,12 +512,6 @@ const handleFinalPaymentSubmit = () => {
       </button>
 
       <h1 class="buyer-header-title">{{ currentStep === 1 ? t.headerStep1 : t.headerStep2 }}</h1>
-      
-      <!-- Language Switcher Button (ID 🇮🇩 / EN 🇬🇧) -->
-      <button class="lang-toggle-btn" @click="toggleLanguage" type="button" :title="currentLang === 'ID' ? 'Ganti ke Bahasa Inggris' : 'Switch to Indonesian'">
-        <span class="lang-flag">{{ currentLang === 'ID' ? '🇮🇩' : '🇬🇧' }}</span>
-        <span class="lang-code">{{ currentLang }}</span>
-      </button>
     </div>
 
     <!-- Timer Banner Pill Attached Right Below Header -->
@@ -579,7 +574,7 @@ const handleFinalPaymentSubmit = () => {
             </div>
 
             <button class="accordion-chevron-btn" :class="{ 'rotated': isVoucherExpanded }" type="button">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="#494a4a" style="width: 16px; height: 16px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="#194e9e" style="width: 16px; height: 16px;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
               </svg>
             </button>
@@ -619,9 +614,9 @@ const handleFinalPaymentSubmit = () => {
         <!-- Dashed Divider Line -->
         <div class="dashed-section-divider"></div>
 
-        <!-- 3. Section Data Pemesan -->
+        <!-- 3. Section Data Pemesan (Accordion) -->
         <div class="soft-section-block orderer-section">
-          <div class="section-header-row no-cursor">
+          <div class="section-header-row" @click="isOrdererExpanded = !isOrdererExpanded">
             <div class="header-title-group">
               <div class="icon-circle-blue">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" class="card-icon">
@@ -630,59 +625,67 @@ const handleFinalPaymentSubmit = () => {
               </div>
               <span class="card-heading-text">{{ t.ordererTitle }}</span>
             </div>
+
+            <button class="accordion-chevron-btn" :class="{ 'rotated': isOrdererExpanded }" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="#494a4a" style="width: 16px; height: 16px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
           </div>
 
-          <div class="section-body-content">
-            <div class="form-field-group">
-              <label class="field-label-text">{{ t.fullNameLabel }} <span class="required-star">*</span></label>
-              <input 
-                v-model="ordererForm.fullName" 
-                type="text" 
-                class="field-text-input" 
-                :class="{ 'has-error': ordererErrors.fullName }"
-                :placeholder="t.fullNamePlaceholder" 
-                @input="validateOrdererField('fullName')"
-                @blur="validateOrdererField('fullName')"
-              />
-              <span v-if="ordererErrors.fullName" class="field-error-text">{{ ordererErrors.fullName }}</span>
-            </div>
-
-            <div class="form-field-group">
-              <label class="field-label-text">{{ t.emailLabel }} <span class="required-star">*</span></label>
-              <input 
-                v-model="ordererForm.email" 
-                type="email" 
-                class="field-text-input" 
-                :class="{ 'has-error': ordererErrors.email }"
-                :placeholder="t.emailPlaceholder" 
-                @input="validateOrdererField('email')"
-                @blur="validateOrdererField('email')"
-              />
-              <span v-if="ordererErrors.email" class="field-error-text">{{ ordererErrors.email }}</span>
-            </div>
-
-            <div class="form-field-group">
-              <label class="field-label-text">{{ t.phoneLabel }} <span class="required-star">*</span></label>
-              <div class="phone-input-row">
-                <div class="country-code-selector">
-                  <span class="code-text">+62</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="#151416" class="chevron-icon">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
+          <transition name="accordion-slide">
+            <div v-if="isOrdererExpanded" class="section-body-content">
+              <div class="form-field-group">
+                <label class="field-label-text">{{ t.fullNameLabel }} <span class="required-star">*</span></label>
                 <input 
-                  v-model="ordererForm.phone" 
-                  type="tel" 
+                  v-model="ordererForm.fullName" 
+                  type="text" 
                   class="field-text-input" 
-                  :class="{ 'has-error': ordererErrors.phone }"
-                  :placeholder="t.phonePlaceholder" 
-                  @input="validateOrdererField('phone')"
-                  @blur="validateOrdererField('phone')"
+                  :class="{ 'has-error': ordererErrors.fullName }"
+                  :placeholder="t.fullNamePlaceholder" 
+                  @input="validateOrdererField('fullName')"
+                  @blur="validateOrdererField('fullName')"
                 />
+                <span v-if="ordererErrors.fullName" class="field-error-text">{{ ordererErrors.fullName }}</span>
               </div>
-              <span v-if="ordererErrors.phone" class="field-error-text">{{ ordererErrors.phone }}</span>
+
+              <div class="form-field-group">
+                <label class="field-label-text">{{ t.emailLabel }} <span class="required-star">*</span></label>
+                <input 
+                  v-model="ordererForm.email" 
+                  type="email" 
+                  class="field-text-input" 
+                  :class="{ 'has-error': ordererErrors.email }"
+                  :placeholder="t.emailPlaceholder" 
+                  @input="validateOrdererField('email')"
+                  @blur="validateOrdererField('email')"
+                />
+                <span v-if="ordererErrors.email" class="field-error-text">{{ ordererErrors.email }}</span>
+              </div>
+
+              <div class="form-field-group">
+                <label class="field-label-text">{{ t.phoneLabel }} <span class="required-star">*</span></label>
+                <div class="phone-input-row">
+                  <div class="country-code-selector">
+                    <span class="code-text">+62</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="#151416" class="chevron-icon">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </div>
+                  <input 
+                    v-model="ordererForm.phone" 
+                    type="tel" 
+                    class="field-text-input" 
+                    :class="{ 'has-error': ordererErrors.phone }"
+                    :placeholder="t.phonePlaceholder" 
+                    @input="validateOrdererField('phone')"
+                    @blur="validateOrdererField('phone')"
+                  />
+                </div>
+                <span v-if="ordererErrors.phone" class="field-error-text">{{ ordererErrors.phone }}</span>
+              </div>
             </div>
-          </div>
+          </transition>
         </div>
 
         <!-- 4. Section Data Pemilik Tiket Per Tiket -->
@@ -983,7 +986,7 @@ const handleFinalPaymentSubmit = () => {
 .buyer-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 8px 16px;
   background-color: #ffffff;
   border-bottom: 1px solid #f1f5f9;
@@ -995,6 +998,8 @@ const handleFinalPaymentSubmit = () => {
 }
 
 .back-btn {
+  position: absolute;
+  left: 12px;
   background: transparent !important;
   border: none !important;
   cursor: pointer;
@@ -1019,50 +1024,12 @@ const handleFinalPaymentSubmit = () => {
   opacity: 0.5;
 }
 
-.lang-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: #151416;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.lang-toggle-btn:hover {
-  background-color: #e2e8f0;
-  border-color: #94a3b8;
-}
-
-.lang-toggle-btn:active {
-  transform: scale(0.96);
-}
-
-.lang-flag {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.lang-code {
-  font-size: 12px;
-  font-weight: 700;
-  color: #194e9e;
-  letter-spacing: 0.5px;
-}
-
-
-
 .buyer-header-title {
   font-size: 15px;
   font-weight: 600;
   color: #151416;
   margin: 0;
+  text-align: center;
 }
 
 /* Stepper Progress Bar Banner */

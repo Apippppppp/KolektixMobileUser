@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import Login from './components/Login.vue';
 import Home from './components/Home.vue';
 
-const currentScreen = ref('home'); // 'login' or 'home'
+const currentScreen = ref('login'); // 'login' or 'home'
 </script>
 
 <template>
