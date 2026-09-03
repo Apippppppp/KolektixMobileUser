@@ -855,7 +855,7 @@ onMounted(() => {
   <div class="mobile-wrapper">
     <!-- Top Nav Bar -->
     <!-- Top Nav Bar -->
-    <header class="navbar-header" :class="{ 
+    <header v-if="activeTab !== 'event-detail'" class="navbar-header" :class="{ 
       'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile',
       'navbar-scrolled': isScrolledFromTop 
     }">
