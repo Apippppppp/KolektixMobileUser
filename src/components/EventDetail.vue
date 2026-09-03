@@ -614,14 +614,16 @@ const openLocationMaps = () => {
       <!-- Scrolled Header Title & Meta -->
       <div v-else class="header-scrolled-info">
         <h2 class="scrolled-event-title">{{ event.title }}</h2>
-        <span class="scrolled-event-meta">{{ event.date || '14 Nov \'26' }} • {{ event.location || 'Jawa Barat' }}</span>
+        <span class="scrolled-event-meta">{{ event.date || "14 Nov '26" }} • {{ event.location || 'Jawa Barat' }}</span>
       </div>
 
       <div class="header-actions">
         <button class="action-btn" @click="handleShare" title="Bagikan">
-          <!-- Clean & Beautiful Blue Share/Export Icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="#194e9e" class="header-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15" />
+          <!-- Modern iOS/macOS Share Export Icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="header-icon">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+            <polyline points="16 6 12 2 8 6"/>
+            <line x1="12" y1="2" x2="12" y2="15"/>
           </svg>
         </button>
       </div>
@@ -696,10 +698,17 @@ const openLocationMaps = () => {
             </svg>
             <span class="meta-detail-text" style="flex: 1; text-decoration: underline; text-underline-offset: 2px;">{{ event.id === 5 ? 'Cornerstone Bandung' : (event.location || 'Cornerstone Bandung') }}</span>
             
-            <!-- Clickable Direct Maps Link Icon Button Only -->
-            <button class="gmaps-direct-btn" title="Buka Petunjuk Arah di Maps" style="background: #eff6ff; border: none; padding: 6px; border-radius: 50%; color: #194e9e; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.15s;">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#194e9e" style="width: 15px; height: 15px;">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 21 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            <!-- Clickable Direct Maps Link Icon Button -->
+            <button class="gmaps-direct-btn" @click.stop="openLocationMaps" title="Buka Petunjuk Arah di Maps">
+              <svg viewBox="0 0 24 24" fill="none" class="gmaps-icon-svg" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="url(#gmaps-grad)" />
+                <circle cx="12" cy="9" r="2.5" fill="#ffffff" />
+                <defs>
+                  <linearGradient id="gmaps-grad" x1="5" y1="2" x2="19" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#2563eb" />
+                    <stop offset="1" stop-color="#1d4ed8" />
+                  </linearGradient>
+                </defs>
               </svg>
             </button>
           </div>
@@ -711,11 +720,11 @@ const openLocationMaps = () => {
         <!-- Creator Profile Row (Below Divider) -->
         <div class="creator-profile-row" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
           <img :src="event.creatorLogo || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80'" alt="Creator Logo" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
-          <div style="display: flex; flex-direction: column; gap: 1px;">
-            <span style="font-size: 9px; font-weight: 400; color: #494a4a;">Diselenggarakan oleh:</span>
-            <div style="display: flex; align-items: center; gap: 3px;">
-              <span style="font-size: 12px; font-weight: 500; color: #151416;">{{ event.organizer || 'Maxpaincompany LTD' }}</span>
-              <svg viewBox="0 0 24 24" fill="#2196F3" style="width: 12px; height: 12px; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 6px; font-weight: 400; color: #494a4a;">Diselenggarakan Oleh:</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 11.5px; font-weight: 600; color: #0f172a;">{{ event.organizer || 'Maxpaincompany LTD' }}</span>
+              <svg viewBox="0 0 24 24" fill="#2196F3" style="width: 14px; height: 14px; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
             </div>
@@ -1302,7 +1311,7 @@ const openLocationMaps = () => {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                   <div class="sale-info-left" style="display: flex; flex-direction: column; gap: 2px;">
                     <h4 class="sale-buyer" style="margin: 0; font-size: 14px; font-weight: 700; color: #0f172a;">{{ sale.buyer }}</h4>
-                    <span class="sale-ticket-type" style="font-size: 12px; color: #64748b;">{{ sale.ticket }} ({{ sale.qty }}x)</span>
+                    <span class="sale-ticket-type" style="font-size: 12px; color: #494a4a;">{{ sale.ticket }} ({{ sale.qty }}x)</span>
                     <span class="sale-date" style="font-size: 11px; color: #94a3b8;">{{ sale.date }} WIB</span>
                   </div>
                   <div class="sale-info-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
@@ -1349,7 +1358,7 @@ const openLocationMaps = () => {
               style="padding: 6px 16px; font-size: 13px; font-weight: 600; border-radius: 20px; cursor: pointer; transition: all 0.2s; font-family: var(--font-sans);"
               :style="{
                 backgroundColor: selectedTypeFilter === filter ? '#194e9e' : '#ffffff',
-                color: selectedTypeFilter === filter ? '#ffffff' : '#64748b',
+                color: selectedTypeFilter === filter ? '#ffffff' : '#494a4a',
                 border: selectedTypeFilter === filter ? '1px solid #194e9e' : '1px solid #e2e8f0'
               }"
             >
@@ -1369,9 +1378,9 @@ const openLocationMaps = () => {
               <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; padding-right: 8px;">
                   <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #000000; line-height: 1.2;">{{ tx.name }}</h4>
-                  <span style="font-size: 12px; color: #64748b;">{{ tx.email }}</span>
+                  <span style="font-size: 12px; color: #494a4a;">{{ tx.email }}</span>
                   <span style="font-size: 11px; color: #94a3b8;">Dikirim: {{ tx.date }}</span>
-                  <span class="font-mono" style="font-size: 11px; color: #64748b;">{{ tx.code }}</span>
+                  <span class="font-mono" style="font-size: 11px; color: #494a4a;">{{ tx.code }}</span>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0;">
                   <span 
@@ -1435,11 +1444,11 @@ const openLocationMaps = () => {
             <span>Lihat Tiket</span>
           </button>
           <button class="btn-chat-bubble" @click="handleContactOrganizer" title="Chat Penyelenggara">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" class="chat-bubble-svg">
-              <path d="M4.913 2.658c2.075-.27 4.19-.408 6.337-.408 2.147 0 4.262.139 6.337.408 1.922.25 3.291 1.861 3.405 3.727a4.403 4.403 0 0 1-1.032 3.03l-2.062 2.378a.75.75 0 0 0-.17.476v1.396a.75.75 0 0 1-1.28.53l-2.316-2.316a.75.75 0 0 0-.53-.22H11.25a.75.75 0 0 1 0-1.5h2.553a2.25 2.25 0 0 1 1.591.659l1.106 1.106v-1.12c0-.62.247-1.214.688-1.653l2.062-2.378c.362-.418.572-.962.548-1.53-.081-1.328-1.074-2.453-2.434-2.63-1.954-.254-3.94-.385-5.957-.385-2.017 0-4.003.131-5.957.385-1.36.177-2.353 1.302-2.434 2.63-.024.568.186 1.112.548 1.53l2.062 2.378c.441.439.688 1.033.688 1.653v3.42c0 .621.504 1.125 1.125 1.125h.375a.75.75 0 0 1 0 1.5h-.375A2.625 2.625 0 0 1 6 18.375v-2.735a2.25 2.25 0 0 0-.51-1.428L3.428 11.83A4.403 4.403 0 0 1 2.396 8.8c.114-1.866 1.483-3.477 3.405-3.727Z" />
-              <circle cx="12" cy="11" r="1" />
-              <circle cx="8" cy="11" r="1" />
-              <circle cx="16" cy="11" r="1" />
+            <svg viewBox="0 0 24 24" fill="none" class="chat-bubble-svg" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.477 2 2 5.818 2 10.5c0 2.57 1.353 4.87 3.473 6.438-.168.995-.67 2.37-1.688 3.512 0 0 2.146-.35 3.992-1.64.694.195 1.436.3 2.223.3 5.523 0 10-3.818 10-8.5S17.523 2 12 2z" fill="#ffffff"/>
+              <circle cx="8" cy="10.5" r="1.2" fill="#194e9e"/>
+              <circle cx="12" cy="10.5" r="1.2" fill="#194e9e"/>
+              <circle cx="16" cy="10.5" r="1.2" fill="#194e9e"/>
             </svg>
           </button>
         </div>
@@ -1484,8 +1493,11 @@ const openLocationMaps = () => {
           </button>
 
           <button class="btn-chat-bubble" @click="handleContactOrganizer" title="Chat Penyelenggara">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="chat-bubble-svg">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a.75.75 0 0 1-1.016-.944 4.194 4.194 0 0 0 .61-2.025A7.56 7.56 0 0 1 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+            <svg viewBox="0 0 24 24" fill="none" class="chat-bubble-svg" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.477 2 2 5.818 2 10.5c0 2.57 1.353 4.87 3.473 6.438-.168.995-.67 2.37-1.688 3.512 0 0 2.146-.35 3.992-1.64.694.195 1.436.3 2.223.3 5.523 0 10-3.818 10-8.5S17.523 2 12 2z" fill="#ffffff"/>
+              <circle cx="8" cy="10.5" r="1.2" fill="#194e9e"/>
+              <circle cx="12" cy="10.5" r="1.2" fill="#194e9e"/>
+              <circle cx="16" cy="10.5" r="1.2" fill="#194e9e"/>
             </svg>
           </button>
         </div>
@@ -1587,7 +1599,7 @@ const openLocationMaps = () => {
                   </svg>
                 </div>
                 <span style="font-size: 13px; font-weight: 600; color: #000000; margin-top: 2px;">Belum Ada Tiket Dipilih</span>
-                <span style="font-size: 11.5px; color: #64748b; font-weight: 400; line-height: 1.4; max-width: 220px;">Silakan pilih jumlah tiket pada pilihan kategori tiket di atas.</span>
+                <span style="font-size: 11.5px; color: #494a4a; font-weight: 400; line-height: 1.4; max-width: 220px;">Silakan pilih jumlah tiket pada pilihan kategori tiket di atas.</span>
               </div>
             </div>
 
@@ -1820,22 +1832,32 @@ const openLocationMaps = () => {
 }
 
 .back-btn, .action-btn {
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
   cursor: pointer;
   color: #194e9e;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  transition: background-color 0.2s;
-  padding: 0;
+  width: auto;
+  height: auto;
+  border-radius: 0 !important;
+  transition: opacity 0.2s ease;
+  padding: 4px;
+  box-shadow: none !important;
 }
 
 .back-btn:hover, .action-btn:hover {
-  background-color: #f1f5f9;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  opacity: 0.75;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.back-btn:active, .action-btn:active {
+  opacity: 0.5;
+  transform: none !important;
 }
 
 .header-icon {
@@ -2202,7 +2224,7 @@ const openLocationMaps = () => {
   padding: 14px 16px;
   font-size: 14px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
   cursor: pointer;
   position: relative;
   white-space: nowrap;
@@ -2308,8 +2330,8 @@ const openLocationMaps = () => {
 
 .ticket-title-text {
   font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 600;
+  color: #151416;
   margin: 0;
 }
 
@@ -2341,7 +2363,7 @@ const openLocationMaps = () => {
 }
 
 .sales-status-badge.sales-ended .status-dot-mini {
-  background-color: #dc2626;
+  background-color: #e52424;
 }
 
 .ticket-header-right {
@@ -2361,14 +2383,14 @@ const openLocationMaps = () => {
 
 .price-label {
   font-size: 10px;
-  color: #94a3b8;
+  color: #494a4a;
   font-weight: 500;
 }
 
 .price-value {
   font-size: 14px;
-  font-weight: 800;
-  color: #0f172a;
+  font-weight: 600;
+  color: #151416;
 }
 
 .accordion-chevron-btn {
@@ -2410,8 +2432,8 @@ const openLocationMaps = () => {
 
 .section-block-label {
   font-size: 10px;
-  font-weight: 700;
-  color: #000000;
+  font-weight: 600;
+  color: #151416;
   margin: 0;
 }
 
@@ -2436,7 +2458,7 @@ const openLocationMaps = () => {
 .day-name {
   font-size: 8px;
   font-weight: 600;
-  color: #64748b;
+  color: #494a4a;
   text-transform: uppercase;
 }
 
@@ -2450,7 +2472,7 @@ const openLocationMaps = () => {
 .month-name {
   font-size: 8px;
   font-weight: 600;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .validity-text {
@@ -2523,14 +2545,14 @@ const openLocationMaps = () => {
 
 .end-date-label {
   font-size: 9.5px;
-  font-weight: 400;
-  color: #000000;
+  font-weight: 500;
+  color: #494a4a;
 }
 
 .end-date-value {
   font-size: 10px;
-  font-weight: 500;
-  color: #0f172a;
+  font-weight: 600;
+  color: #151416;
 }
 
 .footer-right {
@@ -2595,7 +2617,7 @@ const openLocationMaps = () => {
 
 .sold-out-pill-btn {
   background-color: #e2e8f0;
-  color: #64748b;
+  color: #494a4a;
   font-size: 11px;
   font-weight: 700;
   padding: 6px 12px;
@@ -2718,7 +2740,7 @@ const openLocationMaps = () => {
 
 .sold-label {
   font-size: 13px;
-  color: #64748b;
+  color: #494a4a;
   font-weight: 500;
 }
 
@@ -2772,7 +2794,7 @@ const openLocationMaps = () => {
   justify-content: center;
   align-items: center;
   padding: 40px 20px;
-  color: #64748b;
+  color: #494a4a;
   font-size: 14px;
   text-align: center;
 }
@@ -3097,7 +3119,7 @@ const openLocationMaps = () => {
 
 .bottom-bar-price-val {
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 600;
   color:  #151416;
   line-height: 1.2;
 }
@@ -3161,18 +3183,63 @@ const openLocationMaps = () => {
   border-radius: 12px;
   background-color: #194e9e;
   color: #ffffff;
-  border: none;
+  border: 1.5px solid #194e9e;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(25, 78, 158, 0.25);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-chat-bubble:hover {
+  background-color: #0d3e91;
+  border-color: #194e9e;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(25, 78, 158, 0.35);
+}
+
+.btn-chat-bubble:active {
+  transform: scale(0.93);
 }
 
 .chat-bubble-svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
+}
+
+.gmaps-direct-btn {
+  background: transparent !important;
+  border: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s ease !important;
+  box-shadow: none !important;
+  flex-shrink: 0 !important;
+  padding: 4px !important;
+}
+
+.gmaps-direct-btn:hover {
+  background: transparent !important;
+  opacity: 0.75 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.gmaps-direct-btn:active {
+  opacity: 0.5 !important;
+  transform: none !important;
+}
+
+.gmaps-icon-svg {
+  width: 17px;
+  height: 17px;
 }
 
 /* Transition for slide up */
@@ -3271,7 +3338,7 @@ const openLocationMaps = () => {
 
 .invite-card-email {
   font-size: 12px;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .invitation-card-right {
@@ -3293,7 +3360,7 @@ const openLocationMaps = () => {
 
 .check-in-indicator-badge.not-checked-in {
   background-color: #f1f5f9;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .invitation-card-meta-row {
@@ -3435,7 +3502,7 @@ const openLocationMaps = () => {
 .bottom-sheet-close-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: #494a4a;
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -3667,7 +3734,7 @@ const openLocationMaps = () => {
 .summary-label {
   font-size: 10px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
   text-align: center;
 }
 

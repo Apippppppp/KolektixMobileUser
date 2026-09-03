@@ -970,7 +970,7 @@ onBeforeUnmount(() => {
   padding: 12px 16px;
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
   cursor: pointer;
   position: relative;
   text-align: center;
@@ -1583,7 +1583,7 @@ onBeforeUnmount(() => {
 .manual-tips {
   margin-top: 10px;
   font-size: 9px;
-  color: #64748b;
+  color: #494a4a;
   line-height: 1.4;
   text-align: left;
 }
@@ -1987,7 +1987,7 @@ onBeforeUnmount(() => {
 
 .filters-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .search-wrapper { flex: 1; position: relative; display: flex; align-items: center; }
-.search-icon { position: absolute; left: 12px; width: 14px; height: 14px; color: #64748b; }
+.search-icon { position: absolute; left: 12px; width: 14px; height: 14px; color: #494a4a; }
 .search-input {
   width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
   padding: 10px 12px 10px 34px; font-size: 12px; outline: none; box-sizing: border-box;
@@ -2001,7 +2001,7 @@ onBeforeUnmount(() => {
 .segment-btn {
   flex: 1; background: transparent; border: none;
   padding: 8px 0; font-size: 12px; font-weight: 600;
-  color: #64748b; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+  color: #494a4a; border-radius: 6px; cursor: pointer; transition: all 0.2s;
 }
 .segment-btn.active {
   background-color: white; color: #194E9E;
@@ -2041,7 +2041,7 @@ onBeforeUnmount(() => {
   border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap;
 }
 .badge-checked-in { background-color: #d1fae5; color: #059669; }
-.badge-pending { background-color: #fee2e2; color: #dc2626; }
+.badge-pending { background-color: #fee2e2; color: #e52424; }
 .status-icon { width: 12px; height: 12px; }
 
 .ticket-details-grid {
@@ -2113,7 +2113,7 @@ onBeforeUnmount(() => {
 .modal-event-thumb { width: 52px; height: 40px; border-radius: 6px; object-fit: cover; }
 .modal-event-info { flex: 1; }
 .modal-event-name { font-size: 13px; font-weight: 600; color: #0f172a; margin: 0 0 2px 0; }
-.modal-event-date { font-size: 11px; color: #64748b; margin: 0; }
+.modal-event-date { font-size: 11px; color: #494a4a; margin: 0; }
 .check-icon { width: 18px; height: 18px; color: #194E9E; flex-shrink: 0; }
 
 .modal-close-btn {
@@ -2133,7 +2133,7 @@ onBeforeUnmount(() => {
   font-size: 13px; font-weight: 700; margin-bottom: 20px;
 }
 .banner-green { background-color: #d1fae5; color: #059669; }
-.banner-red { background-color: #fee2e2; color: #dc2626; }
+.banner-red { background-color: #fee2e2; color: #e52424; }
 .banner-icon { width: 18px; height: 18px; }
 
 .detail-info-grid { display: flex; flex-direction: column; gap: 0; margin-bottom: 20px; }
@@ -2142,7 +2142,7 @@ onBeforeUnmount(() => {
   padding: 12px 0; border-bottom: 1px solid #f1f5f9;
 }
 .detail-row:last-child { border-bottom: none; }
-.detail-row-label { font-size: 12px; color: #64748b; font-weight: 500; }
+.detail-row-label { font-size: 12px; color: #494a4a; font-weight: 500; }
 .detail-row-value { font-size: 12px; color: #0f172a; font-weight: 600; text-align: right; }
 
 .modal-checkin-btn { width: 100%; padding: 14px 0; font-size: 14px; border-radius: 10px; }

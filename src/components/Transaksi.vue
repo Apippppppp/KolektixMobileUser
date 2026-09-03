@@ -89,31 +89,25 @@ const filteredTransactions = computed(() => {
     <!-- Transactions List -->
     <div class="transaksi-list-container">
       <div 
-        v-for="item in filteredTransactions" 
+        v-for="(item, index) in filteredTransactions" 
         :key="item.id"
         class="transaksi-card"
       >
         <div class="card-header-row">
           <div class="order-id-group">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ticket-icon-sm"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/></svg>
+            <span class="card-number-badge">#{{ index + 1 }}</span>
             <span class="order-id">{{ item.id }}</span>
           </div>
           <span class="status-badge" :class="item.status.toLowerCase()">{{ item.status }}</span>
         </div>
 
         <div class="card-body-row">
-          <img :src="item.image" :alt="item.eventTitle" class="transaksi-event-img" />
           <div class="transaksi-event-info">
-            <div class="event-title-wrapper">
-              <div v-if="item.eventTitle && item.eventTitle.length > 20" class="event-title-marquee">
-                <h4 class="transaksi-event-title">{{ item.eventTitle }}</h4>
-                <h4 class="transaksi-event-title" aria-hidden="true">{{ item.eventTitle }}</h4>
-              </div>
-              <h4 v-else class="transaksi-event-title static">{{ item.eventTitle }}</h4>
+            <h4 class="transaksi-event-title">{{ item.eventTitle }}</h4>
+            <div class="event-meta-sub-row">
+              <span class="transaksi-date-text">{{ item.date }}</span>
+              <span class="transaksi-organizer">{{ item.organizer }}</span>
             </div>
-            <span class="transaksi-organizer">{{ item.organizer }}</span>
-            <span class="transaksi-ticket-type">{{ item.ticketCategory }}</span>
-            <span class="transaksi-date-text">{{ item.date }}</span>
           </div>
         </div>
 
@@ -148,19 +142,26 @@ const filteredTransactions = computed(() => {
 .transaksi-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 16px 16px 32px 16px;
-  background-color: #f8fafc;
+  padding: 12px 16px 32px 16px;
+  background-color: #ffffff;
   min-height: 100%;
 }
 
 .transaksi-filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 10px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9; /* Thin divider line separating filter bar and transaction cards */
   scrollbar-width: none;
+  background-color: #ffffff;
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .transaksi-filter-bar::-webkit-scrollbar {
@@ -168,71 +169,94 @@ const filteredTransactions = computed(() => {
 }
 
 .filter-pill-btn {
-  background-color: #ffffff;
+  background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  color: #64748b;
-  padding: 6px 14px;
-  border-radius: 50px;
-  font-size: 11px;
+  color: #475569;
+  height: 34px;
+  padding: 0 18px;
+  border-radius: 20px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.filter-pill-btn:hover {
+  background-color: #f1f5f9;
+  color: #194e9e;
+  border-color: #cbd5e1;
 }
 
 .filter-pill-btn.active {
   background-color: #194e9e;
   border-color: #194e9e;
   color: #ffffff;
+  box-shadow: 0 3px 10px rgba(25, 78, 158, 0.22);
 }
 
 .transaksi-list-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .transaksi-card {
-  background-color: #ffffff;
-  border-radius: 16px;
-  padding: 14px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  background-color: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 0 14px 0;
+  border-bottom: 1px solid #e2e8f0 !important;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .card-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #f8fafc;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
 }
 
 .order-id-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
-.ticket-icon-sm {
-  width: 14px;
-  height: 14px;
+.card-number-badge {
+  background: none !important;
+  background-color: transparent !important;
   color: #194e9e;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0;
+  border-radius: 0;
+  letter-spacing: -0.2px;
+  border: none !important;
+  box-shadow: none !important;
+  display: inline-block;
+  line-height: 1;
 }
 
 .order-id {
-  font-size: 11px;
-  font-weight: 700;
-  color: #334155;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .status-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 3px 8px;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 3px 10px;
   border-radius: 50px;
 }
 
@@ -253,75 +277,50 @@ const filteredTransactions = computed(() => {
 
 .card-body-row {
   display: flex;
-  gap: 12px;
   align-items: center;
-}
-
-.transaksi-event-img {
-  width: 64px;
-  height: 64px;
-  border-radius: 10px;
-  object-fit: cover;
+  width: 100%;
 }
 
 .transaksi-event-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.event-title-wrapper {
+  gap: 3px;
   width: 100%;
+  max-width: 100%;
   overflow: hidden;
-  white-space: nowrap;
-  position: relative;
-}
-
-.event-title-marquee {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  animation: cardTitleMarquee 12s linear infinite;
-  will-change: transform;
 }
 
 .transaksi-event-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #151416;
   margin: 0;
   line-height: 1.3;
   white-space: nowrap;
-  flex-shrink: 0;
-  padding-right: 18px;
-}
-
-.transaksi-event-title.static {
-  padding-right: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-@keyframes cardTitleMarquee {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-50%, 0, 0); }
-}
-
-.transaksi-organizer {
-  font-size: 10px;
-  color: #64748b;
-}
-
-.transaksi-ticket-type {
-  font-size: 10px;
-  font-weight: 600;
-  color: #194e9e;
+.event-meta-sub-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
 }
 
 .transaksi-date-text {
-  font-size: 9px;
-  color: #94a3b8;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.transaksi-organizer {
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+  line-height: 1.3;
 }
 
 .card-footer-row {
@@ -338,34 +337,41 @@ const filteredTransactions = computed(() => {
 }
 
 .total-label {
-  font-size: 9px;
+  font-size: 9.5px;
   color: #94a3b8;
 }
 
 .total-amount {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: #151416;
 }
 
 .action-detail-btn {
   background-color: #194e9e;
   color: #ffffff;
   border: none;
-  padding: 6px 14px;
-  border-radius: 50px;
-  font-size: 10px;
-  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.action-detail-btn:hover {
+  background-color: #0d3e91;
 }
 
 .action-detail-btn.pending {
-  background-color: #d97706;
+  background-color: #194e9e;
+  color: #ffffff;
 }
 
 .action-detail-btn.canceled {
   background-color: #f1f5f9;
   color: #475569;
+  border: 1px solid #cbd5e1;
 }
 
 .empty-transaksi-state {

@@ -397,7 +397,7 @@ const withdrawHistory = ref([
   padding: 12px 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
   cursor: pointer;
   position: relative;
   text-align: center;
@@ -589,7 +589,7 @@ const withdrawHistory = ref([
 }
 
 .metric-card-content { display: flex; flex-direction: column; gap: 4px; }
-.metric-label { font-size: 11px; font-weight: 500; color: #64748b; }
+.metric-label { font-size: 11px; font-weight: 500; color: #494a4a; }
 .metric-value { font-size: 16px; font-weight: 700; color: #0f172a; }
 
 .metric-card-icon {
@@ -693,7 +693,7 @@ const withdrawHistory = ref([
 
 .wm-label {
   font-size: 10px;
-  color: #64748b;
+  color: #494a4a;
   white-space: nowrap;
 }
 
@@ -769,7 +769,7 @@ const withdrawHistory = ref([
 
 .da-number {
   font-size: 11px;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .da-edit-icon-btn {
@@ -813,7 +813,7 @@ const withdrawHistory = ref([
 
 .wd-label {
   font-size: 11px;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .wd-value {
@@ -867,7 +867,7 @@ const withdrawHistory = ref([
 .wd-input-prefix {
   font-size: 14px;
   font-weight: 600;
-  color: #64748b;
+  color: #494a4a;
   margin-right: 8px;
 }
 .wd-input-field {
@@ -988,7 +988,7 @@ const withdrawHistory = ref([
 
 .rw-date {
   font-size: 11px;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .rw-right {
@@ -1080,7 +1080,7 @@ const withdrawHistory = ref([
 .calendar-weekdays span {
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .calendar-days-grid {

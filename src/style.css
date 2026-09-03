@@ -61,11 +61,74 @@ body.chat-room-open, html.chat-room-open {
 
 #app {
   width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
+  max-width: 480px;
+  min-height: 100vh;
+  background-color: #ffffff;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* Meta Combined Row (Date & Location) - Static & Marquee Loop */
+.meta-combined-row {
   display: flex;
-  justify-content: center;
   align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.meta-combined-row.meta-marquee-loop {
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.meta-marquee-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+  white-space: nowrap;
+  animation: metaCombinedMarquee 8s linear infinite;
+  will-change: transform;
+  flex-shrink: 0;
+}
+
+@keyframes metaCombinedMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.meta-inline-text {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #494a4a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.meta-inline-icon {
+  width: 12px;
+  height: 12px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.meta-dot-separator {
+  font-size: 9px;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
 @keyframes cardTitleMarquee {

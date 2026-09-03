@@ -505,7 +505,7 @@ const endVoiceCall = () => {
         </div>
 
         <div v-if="filteredChats.length === 0" class="empty-chat-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#494a4a" stroke-width="1.5" class="empty-icon">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
           <p>Tidak ada pesan yang cocok</p>
@@ -860,7 +860,7 @@ const endVoiceCall = () => {
 
 .last-msg-snippet {
   font-size: 12.5px;
-  color: #64748b;
+  color: #494a4a;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -899,7 +899,7 @@ const endVoiceCall = () => {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .empty-icon {
@@ -1335,7 +1335,7 @@ const endVoiceCall = () => {
 
 .received-by-them .file-size {
   font-size: 10px;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .send-action-btn {

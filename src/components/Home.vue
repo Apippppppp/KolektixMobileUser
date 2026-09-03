@@ -331,6 +331,13 @@ const isSaldoOpen = ref(true);
 const isEventGroupOpen = ref(true);
 const isSearchOpen = ref(true);
 const isChatRoomActive = ref(false);
+const isLanguageOpen = ref(false);
+const currentLanguage = ref('ID');
+
+const selectLanguage = (lang) => {
+  currentLanguage.value = lang;
+  isLanguageOpen.value = false;
+};
 
 const handleChatRoomToggle = (isOpen) => {
   isChatRoomActive.value = isOpen;
@@ -343,6 +350,8 @@ const events = ref([
     id: 1,
     title: 'Ngamen 0.5',
     price: 'Rp124.000',
+    originalPrice: 'Rp155.000',
+    discountBadge: '20% OFF',
     organizer: 'Maxpaincompany LTD',
     creatorLogo: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80',
     location: 'Karawang',
@@ -354,6 +363,51 @@ const events = ref([
   },
   {
     id: 2,
+    title: 'Pekan Gembira Loka',
+    price: 'Rp95.000',
+    originalPrice: null,
+    discountBadge: null,
+    organizer: 'Kolektix Organizer',
+    creatorLogo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80',
+    location: 'Bandung',
+    date: 'Sun, 25 Aug 2024',
+    sold: 80,
+    total: 100,
+    status: 'Live',
+    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 3,
+    title: 'Jazz Gunung Bromo',
+    price: 'Rp160.000',
+    originalPrice: 'Rp200.000',
+    discountBadge: '20% OFF',
+    organizer: 'Bromo Fest',
+    creatorLogo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80',
+    location: 'Probolinggo',
+    date: 'Fri, 30 Aug 2024',
+    sold: 190,
+    total: 200,
+    status: 'Live',
+    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 4,
+    title: 'Art Exhibition 2024',
+    price: 'Rp120.000',
+    originalPrice: null,
+    discountBadge: null,
+    organizer: 'Galeri Nasional',
+    creatorLogo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80',
+    location: 'Jakarta',
+    date: 'Sat, 07 Sep 2024',
+    sold: 45,
+    total: 150,
+    status: 'Live',
+    image: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: 5,
     title: 'SIKSAKUBUR - Tiga Dekade Melawan Tunduk',
     price: 'Rp8.000',
     organizer: 'Newhope.inc',
@@ -369,6 +423,8 @@ const events = ref([
     id: 3,
     title: 'Straight Answer 30 Years Of Persistence',
     price: 'Rp85.000',
+    originalPrice: 'Rp100.000',
+    discountBadge: '15% OFF',
     organizer: 'Smartex Bomb Records',
     creatorLogo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=80&q=80',
     location: 'Fatmawati',
@@ -671,15 +727,29 @@ const fetchEventsFromAPI = async () => {
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const json = await res.json();
     if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
-      const mappedEvents = json.data.map(item => {
+      const mappedEvents = json.data.map((item, idx) => {
         let priceStr = 'Gratis';
+        let rawPriceNum = 0;
         if (item.starting_price && parseInt(item.starting_price) > 0) {
-          priceStr = 'Rp' + parseInt(item.starting_price).toLocaleString('id-ID');
+          rawPriceNum = parseInt(item.starting_price);
+          priceStr = 'Rp' + rawPriceNum.toLocaleString('id-ID');
         } else if (item.has_event_ticket && item.has_event_ticket.length > 0) {
           const firstPrice = item.has_event_ticket[0].price;
           if (firstPrice && parseInt(firstPrice) > 0) {
-            priceStr = 'Rp' + parseInt(firstPrice).toLocaleString('id-ID');
+            rawPriceNum = parseInt(firstPrice);
+            priceStr = 'Rp' + rawPriceNum.toLocaleString('id-ID');
           }
+        }
+
+        let originalPriceStr = null;
+        let discountBadgeStr = null;
+        if (rawPriceNum > 0 && (idx % 3 === 0 || idx === 0)) {
+          const origNum = Math.round(rawPriceNum * 1.25);
+          originalPriceStr = 'Rp' + origNum.toLocaleString('id-ID');
+          discountBadgeStr = '20% OFF';
+        } else if (item.original_price && (idx % 3 === 0)) {
+          originalPriceStr = 'Rp' + parseInt(item.original_price).toLocaleString('id-ID');
+          discountBadgeStr = '20% OFF';
         }
 
         let dateStr = item.start_date || 'Segera Hadir';
@@ -704,6 +774,8 @@ const fetchEventsFromAPI = async () => {
           id: item.id,
           title: item.name || 'Event Kolektix',
           price: priceStr,
+          originalPrice: originalPriceStr,
+          discountBadge: discountBadgeStr,
           organizer: orgName,
           creatorLogo: logoSrc,
           location: locStr,
@@ -725,6 +797,48 @@ const fetchEventsFromAPI = async () => {
   }
 };
 
+const fetchMerchFromAPI = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/merch`);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const json = await res.json();
+    const items = json && json.data ? json.data : (Array.isArray(json) ? json : []);
+    if (items && Array.isArray(items) && items.length > 0) {
+      merchList.value = items.map(item => {
+        let priceStr = 'Rp0';
+        const rawPrice = item.price || item.selling_price || item.harga || item.price_per_item;
+        if (rawPrice && parseInt(rawPrice) > 0) {
+          priceStr = 'Rp' + parseInt(rawPrice).toLocaleString('id-ID');
+        }
+
+        let imageSrc = item.image_url || item.photo_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80';
+        if (item.image && !item.image_url) {
+          imageSrc = `${API_URL}/storage/uploads/merch/${item.image}`;
+        }
+
+        const orgName = item.has_creator?.name_event_organizer || item.has_creator?.name || item.creator_name || item.store_name || item.organizer || 'Kolektix Official';
+        const logoSrc = item.has_creator?.image_url || item.creator_logo || 'https://api.kolektix.my.id/storage/uploads/creator/logo-k.png';
+        const categoryStr = item.category_name || item.has_category?.name || item.category || 'Official Merch';
+        const stockText = item.stock !== undefined && item.stock !== null ? `Stok: ${item.stock}` : 'Tersedia';
+
+        return {
+          id: item.id,
+          title: item.name || item.title || 'Official Merchandise',
+          price: priceStr,
+          organizer: orgName,
+          creatorLogo: logoSrc,
+          category: categoryStr,
+          stockStr: stockText,
+          badge: item.badge || 'OFFICIAL',
+          image: imageSrc
+        };
+      });
+    }
+  } catch (err) {
+    console.warn('Gagal memuat API merch, menggunakan fallback data:', err);
+  }
+};
+
 onMounted(() => {
   if (!window.LottiePlayer && !document.getElementById('lottie-player-script')) {
     const script = document.createElement('script');
@@ -733,6 +847,7 @@ onMounted(() => {
     document.head.appendChild(script);
   }
   fetchEventsFromAPI();
+  fetchMerchFromAPI();
 });
 </script>
 
@@ -741,23 +856,21 @@ onMounted(() => {
     <!-- Top Nav Bar -->
     <!-- Top Nav Bar -->
     <header class="navbar-header" :class="{ 
-      'hidden-header': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || isChatRoomActive,
-      'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event',
+      'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile',
       'navbar-scrolled': isScrolledFromTop 
     }">
-      <template v-if="activeTab === 'home' || activeTab === 'chat' || activeTab === 'event'">
+      <template v-if="activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile'">
         <div class="home-nav-container">
-          <!-- Top Row: Account Greeting & Simple Action Icons -->
+          <!-- Top Row: Account Greeting & Action Buttons -->
           <div class="home-nav-top">
             <div class="account-group" @click="isSidebarOpen = true">
-              <button class="nav-menu-lines-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="menu-lines-icon">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              <button class="nav-menu-lines-btn" title="Buka Sidebar Menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="menu-lines-icon">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
                 </svg>
               </button>
               <div class="account-text-info">
                 <span class="account-name">Hi, Afif Maulana Yusuf</span>
-                
               </div>
             </div>
 
@@ -775,21 +888,97 @@ onMounted(() => {
                 </svg>
               </button>
 
-              <!-- <button class="nav-icon-btn notification-btn" title="Notifikasi" @click="isSidebarOpen = true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header-action-icon">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                </svg>
-                <span class="notification-badge-dot"></span>
-              </button> -->
+              <!-- Language Icon Button with floating popup card -->
+              <div class="language-btn-wrapper">
+                <button 
+                  class="nav-icon-btn language-btn" 
+                  :class="{ active: isLanguageOpen }"
+                  title="Pilih Bahasa" 
+                  @click="isLanguageOpen = !isLanguageOpen"
+                >
+                  <svg v-if="currentLanguage === 'ID'" viewBox="0 0 24 24" class="flag-icon-svg" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="24" height="24" rx="12" fill="#F1F5F9"/>
+                    <g clip-path="url(#id-flag-clip-btn)">
+                      <rect width="24" height="12" fill="#E70011"/>
+                      <rect y="12" width="24" height="12" fill="#FFFFFF"/>
+                    </g>
+                    <defs>
+                      <clipPath id="id-flag-clip-btn">
+                        <circle cx="12" cy="12" r="11"/>
+                      </clipPath>
+                    </defs>
+                  </svg>
 
-              <button class="nav-icon-btn cart-btn" title="Keranjang" @click="isSidebarOpen = true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header-action-icon">
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <path d="M16 10a4 4 0 0 1-8 0"></path>
-                </svg>
-              </button>
+                  <svg v-else viewBox="0 0 24 24" class="flag-icon-svg" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="11" fill="#00247D"/>
+                    <clipPath id="uk-flag-clip-btn">
+                      <circle cx="12" cy="12" r="11"/>
+                    </clipPath>
+                    <g clip-path="url(#uk-flag-clip-btn)">
+                      <path d="M0 0L24 24M24 0L0 24" stroke="#FFFFFF" stroke-width="4"/>
+                      <path d="M0 0L24 24M24 0L0 24" stroke="#CF142B" stroke-width="2.5"/>
+                      <path d="M12 0V24M0 12H24" stroke="#FFFFFF" stroke-width="6"/>
+                      <path d="M12 0V24M0 12H24" stroke="#CF142B" stroke-width="3.5"/>
+                    </g>
+                  </svg>
+                </button>
+
+                <!-- Floating Popup Card from Language Icon Button -->
+                <transition name="pop-scale">
+                  <div v-if="isLanguageOpen" class="language-popup-card">
+                    <div class="language-popup-header">
+                      <span class="accordion-title">Pilih Bahasa / Language</span>
+                    </div>
+                    <div class="language-options-list">
+                      <button 
+                        class="lang-option-item" 
+                        :class="{ active: currentLanguage === 'ID' }"
+                        @click="selectLanguage('ID'); isLanguageOpen = false;"
+                      >
+                        <svg viewBox="0 0 24 24" class="lang-flag-svg" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="24" height="24" rx="12" fill="#F1F5F9"/>
+                          <g clip-path="url(#id-flag-clip-opt)">
+                            <rect width="24" height="12" fill="#E70011"/>
+                            <rect y="12" width="24" height="12" fill="#FFFFFF"/>
+                          </g>
+                          <defs>
+                            <clipPath id="id-flag-clip-opt">
+                              <circle cx="12" cy="12" r="11"/>
+                            </clipPath>
+                          </defs>
+                        </svg>
+                        <span class="lang-name">Bahasa Indonesia (ID)</span>
+                        <svg v-if="currentLanguage === 'ID'" viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.5" class="lang-check-icon">
+                       
+                        </svg>
+                      </button>
+
+                      <button 
+                        class="lang-option-item" 
+                        :class="{ active: currentLanguage === 'EN' }"
+                        @click="selectLanguage('EN'); isLanguageOpen = false;"
+                      >
+                        <svg viewBox="0 0 24 24" class="lang-flag-svg" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="12" r="11" fill="#00247D"/>
+                          <clipPath id="uk-flag-clip-opt">
+                            <circle cx="12" cy="12" r="11"/>
+                          </clipPath>
+                          <g clip-path="url(#uk-flag-clip-opt)">
+                            <path d="M0 0L24 24M24 0L0 24" stroke="#FFFFFF" stroke-width="4"/>
+                            <path d="M0 0L24 24M24 0L0 24" stroke="#CF142B" stroke-width="2.5"/>
+                            <path d="M12 0V24M0 12H24" stroke="#FFFFFF" stroke-width="6"/>
+                            <path d="M12 0V24M0 12H24" stroke="#CF142B" stroke-width="3.5"/>
+                          </g>
+                        </svg>
+                        <span class="lang-name">English (EN)</span>
+                        <svg v-if="currentLanguage === 'EN'" viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.5" class="lang-check-icon">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </transition>
+              </div>
             </div>
           </div>
 
@@ -803,7 +992,7 @@ onMounted(() => {
                 </svg>
                 <input type="text" v-model="searchQuery" :placeholder="currentPlaceholder" class="search-bar-input" />
                 <button class="search-close-btn" title="Tutup Pencarian" @click="isSearchOpen = false">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" class="close-search-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#494a4a" stroke-width="2" class="close-search-icon">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                   </svg>
@@ -853,7 +1042,12 @@ onMounted(() => {
 
       <!-- Profile tab content template -->
       <template v-else-if="activeTab === 'profile'">
-        <Profile @logout="emit('logout')" @navigate-transaksi="activeTab = 'transaksi'" />
+        <Profile 
+          :current-language="currentLanguage" 
+          @logout="emit('logout')" 
+          @navigate-transaksi="activeTab = 'transaksi'" 
+          @toggle-language="currentLanguage = currentLanguage === 'ID' ? 'EN' : 'ID'" 
+        />
       </template>
 
       <!-- Transaksi tab content template -->
@@ -928,7 +1122,7 @@ onMounted(() => {
           </div>
 
           <!-- Restored Event Cards List -->
-          <div class="top-events-header">
+          <div class="top-events-header" @click="handleSwitchTab('event', 'terbaru', 'Events Terbaru')" style="cursor: pointer;">
             <div class="title-with-blue-icon">
               <div class="lottie-box-wrapper">
                 <lottie-player 
@@ -942,6 +1136,11 @@ onMounted(() => {
               </div>
               <h2 class="top-events-title">Events Terbaru</h2>
             </div>
+            <button class="see-all-icon-btn" @click.stop="handleSwitchTab('event', 'terbaru', 'Events Terbaru')" title="Lihat Semua">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
           </div>
 
           <section class="cards-list-section">
@@ -970,14 +1169,52 @@ onMounted(() => {
                   <h3 v-else class="event-card-title static">{{ event.title }}</h3>
                 </div>
 
-                <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
-                <div class="meta-combined-row">
-                  <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+                <!-- Combined Meta Row (Marquee Loop ONLY for VERY Long Meta > 34 chars) -->
+                <div v-if="((event.date || '') + (event.location || '')).length > 34" class="meta-combined-row meta-marquee-loop">
+                  <div class="meta-marquee-track">
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      {{ event.date || 'Sat, 24 Aug 2024' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {{ event.location || 'Bandung' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                  </div>
+                  <div class="meta-marquee-track" aria-hidden="true">
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      {{ event.date || 'Sat, 24 Aug 2024' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {{ event.location || 'Bandung' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                  </div>
+                </div>
+                <div v-else class="meta-combined-row">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || 'Sat, 24 Aug 2024' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
                 </div>
 
-                <!-- Price Row above creator (Aligned Right) -->
+                <!-- Price Row above creator (Strikethrough Red Line + Bold Red Price like uploaded image) -->
                 <div class="card-price-top-row">
-                  <span class="event-card-price">{{ event.price }}</span>
+                  <div v-if="event.originalPrice" class="discount-price-column">
+                    <span class="event-card-original-price">{{ event.originalPrice }}</span>
+                    <span class="event-card-price price-discount">{{ event.price }}</span>
+                  </div>
+                  <span v-else class="event-card-price">{{ event.price }}</span>
                 </div>
 
                 <!-- Divider line between Price and Creator -->
@@ -987,7 +1224,7 @@ onMounted(() => {
                 <div class="creator-profile-row">
                   <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                   <div class="creator-text-wrap">
-                    <span class="creator-by-label">Diselenggarakan oleh:</span>
+                    <span class="creator-by-label">Diselenggarakan Oleh:</span>
                     <div class="creator-name-with-badge">
                       <span class="creator-name">{{ event.organizer }}</span>
                       <span class="verified-badge">
@@ -1003,7 +1240,7 @@ onMounted(() => {
           </section>
 
           <!-- Segera Hadir Section -->
-          <div class="top-events-header coming-soon-header">
+          <div class="top-events-header coming-soon-header" @click="handleSwitchTab('event', 'segera-hadir', 'Segera Hadir')" style="cursor: pointer;">
             <div class="title-with-blue-icon">
               <div class="lottie-box-wrapper">
                 <lottie-player 
@@ -1017,6 +1254,11 @@ onMounted(() => {
               </div>
               <h2 class="top-events-title">Segera Hadir</h2>
             </div>
+            <button class="see-all-icon-btn" @click.stop="handleSwitchTab('event', 'segera-hadir', 'Segera Hadir')" title="Lihat Semua">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
           </div>
 
           <div class="coming-soon-wrapper">
@@ -1058,14 +1300,52 @@ onMounted(() => {
                         <h3 v-else class="event-card-title static">{{ event.title }}</h3>
                       </div>
 
-                      <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
-                      <div class="meta-combined-row">
-                        <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+                      <!-- Combined Meta Row (Marquee Loop for Long Meta, Static for Short Meta) -->
+                      <div v-if="((event.date || '') + (event.location || '')).length > 22" class="meta-combined-row meta-marquee-loop">
+                        <div class="meta-marquee-track">
+                          <span class="meta-inline-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            {{ event.date || 'Sat, 24 Aug 2024' }}
+                          </span>
+                          <span class="meta-dot-separator">•</span>
+                          <span class="meta-inline-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            {{ event.location || 'Bandung' }}
+                          </span>
+                          <span class="meta-dot-separator">•</span>
+                        </div>
+                        <div class="meta-marquee-track" aria-hidden="true">
+                          <span class="meta-inline-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            {{ event.date || 'Sat, 24 Aug 2024' }}
+                          </span>
+                          <span class="meta-dot-separator">•</span>
+                          <span class="meta-inline-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            {{ event.location || 'Bandung' }}
+                          </span>
+                          <span class="meta-dot-separator">•</span>
+                        </div>
+                      </div>
+                      <div v-else class="meta-combined-row">
+                        <span class="meta-inline-text">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          {{ event.date || 'Sat, 24 Aug 2024' }}
+                        </span>
+                        <span class="meta-dot-separator">•</span>
+                        <span class="meta-inline-text">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          {{ event.location || 'Bandung' }}
+                        </span>
                       </div>
 
-                      <!-- Price Row above creator (Aligned Right) -->
+                      <!-- Price Row above creator (Strikethrough Red Line + Bold Red Price like uploaded image) -->
                       <div class="card-price-top-row">
-                        <span class="event-card-price">{{ event.price || 'Gratis' }}</span>
+                        <div v-if="event.originalPrice" class="discount-price-column">
+                          <span class="event-card-original-price">{{ event.originalPrice }}</span>
+                          <span class="event-card-price price-discount">{{ event.price || 'Gratis' }}</span>
+                        </div>
+                        <span v-else class="event-card-price">{{ event.price || 'Gratis' }}</span>
                       </div>
 
                       <!-- Divider line between Price and Creator -->
@@ -1075,7 +1355,7 @@ onMounted(() => {
                       <div class="creator-profile-row">
                         <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                         <div class="creator-text-wrap">
-                          <span class="creator-by-label">Diselenggarakan oleh:</span>
+                          <span class="creator-by-label">Diselenggarakan Oleh:</span>
                           <div class="creator-name-with-badge">
                             <span class="creator-name">{{ event.organizer }}</span>
                             <span class="verified-badge">
@@ -1105,7 +1385,7 @@ onMounted(() => {
           </div>
 
           <!-- Additional Events Section: Event Populer -->
-          <div class="top-events-header extra-section-header">
+          <div class="top-events-header extra-section-header" @click="handleSwitchTab('event', 'populer', 'Event Populer')" style="cursor: pointer;">
             <div class="title-with-blue-icon">
               <div class="lottie-box-wrapper">
                 <lottie-player 
@@ -1119,6 +1399,11 @@ onMounted(() => {
               </div>
               <h2 class="top-events-title">Event Populer</h2>
             </div>
+            <button class="see-all-icon-btn" @click.stop="handleSwitchTab('event', 'populer', 'Event Populer')" title="Lihat Semua">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
           </div>
 
           <section class="cards-list-section">
@@ -1146,14 +1431,52 @@ onMounted(() => {
                   <h3 v-else class="event-card-title static">{{ event.title }}</h3>
                 </div>
 
-                <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
-                <div class="meta-combined-row">
-                  <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+                <!-- Combined Meta Row (Marquee Loop for Long Meta, Static for Short Meta) -->
+                <div v-if="((event.date || '') + (event.location || '')).length > 22" class="meta-combined-row meta-marquee-loop">
+                  <div class="meta-marquee-track">
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      {{ event.date || 'Sat, 24 Aug 2024' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {{ event.location || 'Bandung' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                  </div>
+                  <div class="meta-marquee-track" aria-hidden="true">
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      {{ event.date || 'Sat, 24 Aug 2024' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                    <span class="meta-inline-text">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {{ event.location || 'Bandung' }}
+                    </span>
+                    <span class="meta-dot-separator">•</span>
+                  </div>
+                </div>
+                <div v-else class="meta-combined-row">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || 'Sat, 24 Aug 2024' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
                 </div>
 
-                <!-- Price Row above creator (Aligned Right) -->
+                <!-- Price Row above creator (Strikethrough Red Line + Bold Red Price like uploaded image) -->
                 <div class="card-price-top-row">
-                  <span class="event-card-price">{{ event.price || 'Gratis' }}</span>
+                  <div v-if="event.originalPrice" class="discount-price-column">
+                    <span class="event-card-original-price">{{ event.originalPrice }}</span>
+                    <span class="event-card-price price-discount">{{ event.price || 'Gratis' }}</span>
+                  </div>
+                  <span v-else class="event-card-price">{{ event.price || 'Gratis' }}</span>
                 </div>
 
                 <!-- Divider line between Price and Creator -->
@@ -1163,7 +1486,7 @@ onMounted(() => {
                 <div class="creator-profile-row">
                   <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                   <div class="creator-text-wrap">
-                    <span class="creator-by-label">Diselenggarakan oleh:</span>
+                    <span class="creator-by-label">Diselenggarakan Oleh:</span>
                     <div class="creator-name-with-badge">
                       <span class="creator-name">{{ event.organizer }}</span>
                       <span class="verified-badge">
@@ -1179,7 +1502,7 @@ onMounted(() => {
           </section>
 
           <!-- Section Event Paling Laku (Infinite Loop 1 Card at a Time) -->
-          <div class="top-events-header extra-section-header">
+          <div class="top-events-header extra-section-header" @click="handleSwitchTab('event', 'populer', 'Event Paling Laku')" style="cursor: pointer;">
             <div class="title-with-blue-icon">
               <div class="lottie-box-wrapper">
                 <lottie-player 
@@ -1193,6 +1516,11 @@ onMounted(() => {
               </div>
               <h2 class="top-events-title">Event Paling Laku</h2>
             </div>
+            <button class="see-all-icon-btn" @click.stop="handleSwitchTab('event', 'populer', 'Event Paling Laku')" title="Lihat Semua">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
           </div>
 
           <div 
@@ -1394,8 +1722,8 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Section Official Merchandise (Right below City Cards) -->
-          <div class="top-events-header extra-section-header">
+          <!-- Section Official Merchandise (Layout 100% Identical to Event Cards) -->
+          <div class="top-events-header extra-section-header" @click="handleSwitchTab('event', 'merch', 'Merchandise Official')" style="cursor: pointer;">
             <div class="title-with-blue-icon">
               <div class="lottie-box-wrapper">
                 <lottie-player 
@@ -1409,40 +1737,78 @@ onMounted(() => {
               </div>
               <h2 class="top-events-title">Merchandise Official</h2>
             </div>
+            <button class="see-all-icon-btn" @click.stop="handleSwitchTab('event', 'merch', 'Merchandise Official')" title="Lihat Semua">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
           </div>
 
-          <div class="merch-scroll-list">
+          <section class="cards-list-section">
             <div 
               v-for="merch in merchList" 
               :key="merch.id" 
-              class="merch-card"
+              class="event-card merch-card"
               @click="handleSwitchTab('event', 'aktif', null)"
             >
-              <div class="merch-thumb-wrapper">
-                <img :src="merch.image" :alt="merch.title" class="merch-thumb" />
-                <span v-if="merch.badge" class="merch-badge">{{ merch.badge }}</span>
+              <!-- Card Thumbnail Area -->
+              <div class="card-thumbnail-wrapper">
+                <img :src="merch.image" :alt="merch.title" class="merch-thumbnail" />
+                <div v-if="merch.badge" class="status-badge upcoming">
+                  <span class="status-dot"></span>
+                  <span>{{ merch.badge }}</span>
+                </div>
               </div>
-              <div class="merch-info">
+
+              <!-- Card Info Area -->
+              <div class="card-info">
                 <div class="event-title-wrapper">
-                  <div v-if="merch.title && merch.title.length > 20" class="event-title-marquee">
-                    <h4 class="merch-title">{{ merch.title }}</h4>
-                    <h4 class="merch-title" aria-hidden="true">{{ merch.title }}</h4>
+                  <div v-if="merch.title && merch.title.length > 22" class="event-title-marquee">
+                    <h3 class="event-card-title">{{ merch.title }}</h3>
+                    <h3 class="event-card-title" aria-hidden="true">{{ merch.title }}</h3>
                   </div>
-                  <h4 v-else class="merch-title static">{{ merch.title }}</h4>
+                  <h3 v-else class="event-card-title static">{{ merch.title }}</h3>
                 </div>
 
-                <div class="merch-creator-row">
-                  <img :src="merch.creatorLogo" :alt="merch.organizer" class="merch-creator-avatar" />
-                  <div class="merch-creator-text-group">
-                    <span class="merch-creator-label">Disediakan oleh</span>
-                    <span class="merch-creator-name">{{ merch.organizer }}</span>
-                  </div>
+                <!-- Combined Meta Row (Category & Stock) -->
+                <div class="meta-combined-row">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    {{ merch.category || 'Official' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    {{ merch.stockStr || 'Tersedia' }}
+                  </span>
                 </div>
 
-                <span class="merch-price">{{ merch.price }}</span>
+                <!-- Price Row above creator (Aligned Right) -->
+                <div class="card-price-top-row">
+                  <span class="event-card-price">{{ merch.price }}</span>
+                </div>
+
+                <!-- Divider line between Price and Creator -->
+                <div class="card-middle-divider"></div>
+                
+                <!-- Creator Profile Row below Divider (Disediakan Oleh:) -->
+                <div class="creator-profile-row">
+                  <img :src="merch.creatorLogo" alt="Creator Profile" class="creator-avatar" />
+                  <div class="creator-text-wrap">
+                    <span class="creator-by-label">Disediakan Oleh:</span>
+                    <div class="creator-name-with-badge">
+                      <span class="creator-name">{{ merch.organizer }}</span>
+                      <span class="verified-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="verified-check-svg" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </section>
 
         </div>
       </template>
@@ -1463,56 +1829,65 @@ onMounted(() => {
       <Transaksi v-else-if="activeTab === 'transaksi'" />
 
       <!-- Profile Component -->
-      <Profile v-else-if="activeTab === 'profile'" />
+      <Profile 
+        v-else-if="activeTab === 'profile'" 
+        :current-language="currentLanguage" 
+        @logout="emit('logout')" 
+        @navigate-transaksi="activeTab = 'transaksi'" 
+        @toggle-language="currentLanguage = currentLanguage === 'ID' ? 'EN' : 'ID'" 
+      />
 
       <!-- Create Event Component -->
       <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
     </main>
 
     <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
-      <button class="nav-tab home-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'">
-        <img 
-          :src="activeTab === 'home' ? '/media/home (2).png' : '/media/home (1).png'" 
-          alt="Home Icon" 
-          class="tab-icon-image"
-        />
-        <span class="tab-label home-label">Home</span>
+      <button class="nav-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'" title="Home">
+        <div class="nav-tab-content">
+          <img src="/media/home (2).png" alt="Home Icon" class="tab-icon-image" />
+          <span v-if="activeTab === 'home'" class="tab-label">Home</span>
+        </div>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'chat' }" @click="activeChatTargetId = null; activeTab = 'chat'">
-        <!-- Chat Icon -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-        </svg>
-        <span class="tab-label">Chat</span>
+      <button class="nav-tab" :class="{ active: activeTab === 'chat' }" @click="activeChatTargetId = null; activeTab = 'chat'" title="Chat">
+        <div class="nav-tab-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tab-icon">
+            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>
+            <path d="M8 12h.01M12 12h.01M16 12h.01" stroke-width="3"/>
+          </svg>
+          <span v-if="activeTab === 'chat'" class="tab-label">Chat</span>
+        </div>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null)">
-        <!-- Calendar Icon -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round" />
-          <line x1="3" y1="9" x2="21" y2="9" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <span class="tab-label">Event</span>
+      <button class="nav-tab" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null)" title="Event">
+        <div class="nav-tab-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tab-icon">
+            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/>
+            <path d="M9 5v14" stroke-dasharray="2 2"/>
+          </svg>
+          <span v-if="activeTab === 'event'" class="tab-label">Event</span>
+        </div>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'transaksi' }" @click="activeTab = 'transaksi'">
-        <!-- Receipt / Transaksi Icon -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
-          <line x1="8" y1="8" x2="16" y2="8"/>
-          <line x1="8" y1="12" x2="16" y2="12"/>
-        </svg>
-        <span class="tab-label">Transaksi</span>
+      <button class="nav-tab" :class="{ active: activeTab === 'transaksi' }" @click="activeTab = 'transaksi'" title="Transaksi">
+        <div class="nav-tab-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tab-icon">
+            <rect x="2" y="5" width="20" height="14" rx="3"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+            <circle cx="16" cy="15" r="1.2" fill="currentColor"/>
+          </svg>
+          <span v-if="activeTab === 'transaksi'" class="tab-label">Transaksi</span>
+        </div>
       </button>
 
-      <button class="nav-tab" :class="{ active: activeTab === 'profile' }" @click="activeTab = 'profile'">
-        <!-- User Profile Icon -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-        <span class="tab-label">Profile</span>
+      <button class="nav-tab" :class="{ active: activeTab === 'profile' }" @click="activeTab = 'profile'" title="Profile">
+        <div class="nav-tab-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tab-icon">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span v-if="activeTab === 'profile'" class="tab-label">Profil</span>
+        </div>
       </button>
     </nav>
 
@@ -1525,66 +1900,51 @@ onMounted(() => {
       <div v-if="isSidebarOpen" class="sidebar-drawer">
         <!-- Sidebar Header -->
         <div class="sidebar-logo-section">
-          <div class="logo-group">
+          <div class="logo-group left-aligned">
             <img src="/media/logo.png" alt="Kolektix Logo" class="sidebar-logo" />
-            <span class="sidebar-logo-subtitle">CREATOR</span>
           </div>
         </div>
 
-        <!-- Creator Profile Card -->
+        <!-- User Profile Card (No Role, No Saldo Toggle) -->
         <div class="sidebar-profile-card">
           <div class="profile-info-group">
             <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80" alt="Avatar" class="sidebar-avatar" />
             <div class="profile-text">
               <span class="profile-name">maspamcompany LTD</span>
-              <span class="profile-role">Creator</span>
             </div>
           </div>
-          <button class="sidebar-toggle-btn" @click="isSaldoOpen = !isSaldoOpen">
-            <div class="chevron-circle" :class="{ active: isSaldoOpen }">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="chevron-icon">
-                <polyline points="18 15 12 9 6 15"></polyline>
-              </svg>
-            </div>
-          </button>
         </div>
 
-        <!-- Collapsible Saldo -->
-        <div v-show="isSaldoOpen" class="sidebar-saldo-card">
-          <div class="saldo-row">
-            <div class="saldo-label-group">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="saldo-icon">
-                <rect x="2" y="5" width="20" height="14" rx="2" ry="2"/>
-                <line x1="2" y1="10" x2="22" y2="10"/>
-              </svg>
-              <span>Saldo</span>
-            </div>
-            <span class="saldo-amount">Rp.0</span>
-          </div>
-          <button class="saldo-detail-btn-new" @click="handleTarikSaldo">Detail</button>
-        </div>
-
-        <!-- Menu Items Navigation List -->
+        <!-- Menu Items Navigation List matching current pages -->
         <nav class="sidebar-nav">
-          <!-- Dashboard item (with Home icon) -->
-          <button class="sidebar-nav-item" :class="{ active: activeTab === 'Dashboard' }" @click="activeTab = 'Dashboard'; isSidebarOpen = false">
+          <!-- Beranda (Home) -->
+          <button class="sidebar-nav-item" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'; isSidebarOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            <span>Dashboard</span>
+            <span>Beranda</span>
           </button>
 
-          <!-- Expandable Event Item -->
+          <!-- Jelajah Event (Explore) -->
+          <button class="sidebar-nav-item" :class="{ active: activeTab === 'explore' }" @click="activeTab = 'explore'; isSidebarOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+            <span>Jelajah Event</span>
+          </button>
+
+          <!-- Expandable Event Item (Left Aligned Text) -->
           <div class="sidebar-nav-group">
-            <button class="sidebar-nav-item parent" @click="isEventGroupOpen = !isEventGroupOpen">
+            <button class="sidebar-nav-item parent parent-event" @click="isEventGroupOpen = !isEventGroupOpen">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                 <line x1="16" y1="2" x2="16" y2="6"/>
                 <line x1="8" y1="2" x2="8" y2="6"/>
                 <line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
-              <span>Event</span>
+              <span class="event-parent-text">Event</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-chevron" :class="{ rotated: !isEventGroupOpen }">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
@@ -1619,7 +1979,7 @@ onMounted(() => {
                 <span>Check In Report</span>
               </button>
 
-              <button class="sidebar-sub-item">
+              <button class="sidebar-sub-item" @click="activeTab = 'event'; isSidebarOpen = false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
                   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                   <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
@@ -1629,33 +1989,19 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Sales Report -->
-          <button class="sidebar-nav-item">
+          <!-- Bantuan & Chat -->
+          <button class="sidebar-nav-item" :class="{ active: activeTab === 'chat' }" @click="activeTab = 'chat'; isSidebarOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-              <line x1="4" y1="22" x2="4" y2="15"/>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            <span>Sales Report</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="arrow-right-sub">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
-
-          <!-- Ticket OTS -->
-          <button class="sidebar-nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
-              <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
-              <line x1="6" y1="6" x2="6" y2="18"/>
-              <line x1="18" y1="6" x2="18" y2="18"/>
-            </svg>
-            <span>Ticket OTS</span>
+            <span>Bantuan & Chat</span>
           </button>
         </nav>
 
         <!-- Sidebar compact button footer -->
         <div class="sidebar-footer">
           <button class="sidebar-nav-item compact-btn" @click="isSidebarOpen = false">
-            <span>Persingkat Menu</span>
+            <span>Tutup Menu</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon right-icon">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -2087,6 +2433,28 @@ onMounted(() => {
   margin: 0;
 }
 
+.see-all-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #f0f6ff;
+  border: 1px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.see-all-icon-btn:hover {
+  background-color: #dbeafe;
+}
+
+.arrow-right-icon {
+  width: 16px;
+  height: 16px;
+}
+
 /* ===== Segera Hadir Special Section (Full Width Side to Side & Compact Sizing) ===== */
 .coming-soon-wrapper {
   display: flex;
@@ -2224,14 +2592,14 @@ onMounted(() => {
   margin-bottom: 0px;
 }
 
-/* ===== Para Kreator Section ===== */
+/* ===== Para Kreator Section Redesigned ===== */
 .creators-scroll-list {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   overflow-x: auto;
-  padding: 0 0 2px 0;
-  margin-top: 2px;
-  margin-bottom: 0px;
+  padding: 4px 2px 10px 2px;
+  margin-top: 4px;
+  margin-bottom: 4px;
   scrollbar-width: none;
   touch-action: pan-x;
   overscroll-behavior-x: contain;
@@ -2244,27 +2612,84 @@ onMounted(() => {
 }
 
 .creator-card {
-  flex: 0 0 115px;
-  width: 115px;
-  background-color: #ffffff;
-  border: 1px solid #f1f5f9;
-  border-radius: 8px; /* Reduced roundedness */
-  padding: 10px 6px;
+  flex: 0 0 120px;
+  width: 120px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  gap: 5px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
   text-align: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.creator-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(25, 78, 158, 0.12);
+  border-color: #93c5fd;
 }
 
 .creator-card-img {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #e2e8f0;
+  border: 2px solid #2563eb;
+  padding: 1px;
+  background-color: #ffffff;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.18);
   margin-bottom: 2px;
+}
+
+.creator-card-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.creator-card-followers {
+  font-size: 9px;
+  font-weight: 500;
+  color: #494a4a;
+  background-color: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.creator-follow-btn {
+  background: linear-gradient(135deg, #194e9e 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 50px;
+  padding: 5px 12px;
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
+}
+
+.creator-follow-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.creator-follow-btn.following {
+  background: #f1f5f9;
+  color: #194e9e;
+  border: 1px solid #bfdbfe;
+  box-shadow: none;
 }
 
 .creator-card-name {
@@ -2280,7 +2705,7 @@ onMounted(() => {
 
 .creator-card-followers {
   font-size: 9.5px;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .creator-follow-btn {
@@ -2504,6 +2929,27 @@ onMounted(() => {
   border-radius: 6px;
 }
 
+.merch-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.merch-card .card-thumbnail-wrapper {
+  height: 200px !important; /* Taller/longer vertical thumbnail height for merchandise */
+  border: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.merch-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  border: none !important;
+}
+
 .status-badge {
   position: absolute;
   top: 8px;
@@ -2562,7 +3008,7 @@ onMounted(() => {
 }
 
 .status-badge.ended {
-  background-color: #64748b;
+  background-color: #494a4a;
   color: #ffffff;
 }
 
@@ -2612,27 +3058,101 @@ onMounted(() => {
 .meta-combined-row {
   display: flex;
   align-items: center;
-  margin-top: 1px;
+  gap: 6px;
+  margin-top: 2px;
   margin-bottom: 4px;
   width: 100%;
   overflow: hidden;
 }
 
+.meta-combined-row.meta-marquee-loop {
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.meta-marquee-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+  white-space: nowrap;
+  animation: metaCombinedMarquee 8s linear infinite;
+  will-change: transform;
+  flex-shrink: 0;
+}
+
+@keyframes metaCombinedMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
 .meta-inline-text {
-  font-size: 11px;
-  font-weight: 400;
-  color: #494a4a; /* Updated grey color */
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #494a4a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.meta-inline-icon {
+  width: 12px;
+  height: 12px;
+  color: #194e9e;
+  flex-shrink: 0;
+}
+
+.meta-dot-separator {
+  color: #cbd5e1;
+  font-size: 10px;
+}
+
 .card-price-top-row {
   display: flex;
   justify-content: flex-end;
-  align-items: center;
+  align-items: flex-end;
   margin-top: 2px;
   width: 100%;
+}
+
+.discount-price-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.event-card-original-price {
+  font-size: 9px;
+  color: #494a4a;
+  text-decoration: line-through;
+  text-decoration-color: #ef4444; /* Red strikethrough line like user image */
+  font-weight: 500;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.event-card-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #194e9e;
+  line-height: 1.1;
+}
+
+.event-card-price.price-discount {
+  color: #e52424 !important; /* Bold red price text like user image */
+  font-weight: 600;
 }
 
 .card-middle-divider {
@@ -2661,28 +3181,30 @@ onMounted(() => {
 .creator-text-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0px;
+  gap: 2px;
   overflow: hidden;
 }
 
 .creator-by-label {
-  font-size: 9px;
-  font-weight: 400; /* Non-bold */
-  color: #494a4a;
+  font-size: 6px !important;
+  font-weight: 400 !important;
+  color: #494a4a !important;
   white-space: nowrap;
-  line-height: 1.1;
+  line-height: 1.2;
+  text-transform: none !important;
+  letter-spacing: 0.1px;
 }
 
 .creator-name-with-badge {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .creator-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: #151416;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2767,35 +3289,36 @@ onMounted(() => {
   background-color: var(--primary-disabled);
 }
 
-/* Bottom Nav styles */
+/* Bottom Nav styles - Sleek Pill White Capsule with Slim Active Blue #194e9e Capsule */
 .bottom-nav {
   position: absolute;
-  bottom: 24px;
-  left: 20px;
-  right: 20px;
-  height: 64px;
-  background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: 0 12px;
-  z-index: 10;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  bottom: 18px;
+  left: 16px;
+  right: 16px;
+  height: 56px;
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 5px 12px !important;
+  box-sizing: border-box;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.13) !important;
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
   transform: translateY(0) scale(1);
   transform-origin: center bottom;
   opacity: 1;
+  overflow: hidden;
 }
 
 .bottom-nav.nav-scrolled {
-  transform: scale(0.88);
-  height: 58px;
-  border-radius: 28px;
-  bottom: 32px; /* Raised higher above bottom edge */
+  transform: scale(0.95);
+  height: 52px;
+  bottom: 14px;
 }
 
 .bottom-nav.hidden-nav {
@@ -2808,60 +3331,100 @@ onMounted(() => {
   background: none;
   border: none;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px; /* decreased gap to raise text position */
-  color: var(--grey);
   cursor: pointer;
-  padding: 4px 4px; /* adjusted padding to keep balance */
-  transition: color 0.2s, transform 0.2s;
-  flex: 1;
+  padding: 0;
+  margin: 0;
+  outline: none;
   height: 100%;
   position: relative;
   font-family: var(--font-sans);
+  flex: 0 0 auto;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nav-tab:hover {
-  color: var(--dark-grey);
-  transform: translateY(-2px);
+.nav-tab-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.tab-icon {
-  width: 24px;
-  height: 24px;
+.nav-tab:active .nav-tab-content {
+  transform: scale(0.95);
+}
+
+.nav-tab:not(.active) .nav-tab-content {
+  background: transparent;
+  width: 38px;
+  padding: 0;
+}
+
+.nav-tab:not(.active) .tab-icon {
+  color: #194e9e !important;
+  stroke: #194e9e !important;
+  width: 20px;
+  height: 20px;
+  transition: transform 0.25s ease;
 }
 
 .tab-icon-image {
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
-  transition: transform 0.2s;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.nav-tab:not(.active) .tab-icon-image {
+  filter: brightness(0) saturate(100%) invert(20%) sepia(80%) saturate(2500%) hue-rotate(205deg) brightness(85%) contrast(95%) !important;
+}
+
+.nav-tab:not(.active):hover .tab-icon,
+.nav-tab:not(.active):hover .tab-icon-image {
+  transform: scale(1.12);
+}
+
+/* Active Nav Tab - Slim & Sleek Blue Capsule #194e9e displaying FULL label without pressing */
+.nav-tab.active .nav-tab-content {
+  background-color: #194e9e !important;
+  padding: 0 14px;
+  height: 38px;
+  width: auto;
+  max-width: none;
+  box-shadow: 0 3px 12px rgba(25, 78, 158, 0.32);
+}
+
+.nav-tab.active .tab-icon {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .nav-tab.active .tab-icon-image {
-  transform: scale(1.05);
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  filter: brightness(0) invert(1) !important;
 }
 
 .tab-label {
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.home-label {
-  margin-top: -4px; /* pull Home label up to align with smaller icons */
-}
-
-/* Shift entire Home tab contents up slightly */
-.home-tab .tab-icon-image,
-.home-tab .home-label {
-  transform: translateY(-2px);
-}
-
-/* Active tab style with top indicator line and blue text */
-.nav-tab.active {
-  color: var(--primary-base);
-  font-weight: 700;
+  display: inline-block !important;
+  color: #ffffff !important;
+  font-size: 12.5px;
+  font-weight: 500 !important;
+  white-space: nowrap;
+  letter-spacing: 0.1px;
+  line-height: 1;
+  overflow: visible;
+  max-width: none;
 }
 
 .nav-tab.active::before {
@@ -3115,7 +3678,7 @@ onMounted(() => {
   padding: 12px 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
   cursor: pointer;
   position: relative;
   text-align: center;
@@ -3564,7 +4127,7 @@ onMounted(() => {
 .manual-tips {
   margin-top: 10px;
   font-size: 9px;
-  color: #64748b;
+  color: #494a4a;
   line-height: 1.4;
   text-align: left;
 }
@@ -3779,12 +4342,21 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  align-items: flex-start;
+}
+
+.logo-group.left-aligned {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .sidebar-logo {
   max-height: 28px;
   width: auto;
   align-self: flex-start;
+  margin-left: 0;
 }
 
 .sidebar-logo-subtitle {
@@ -3799,7 +4371,7 @@ onMounted(() => {
   padding: 16px 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .profile-info-group {
@@ -3822,8 +4394,8 @@ onMounted(() => {
 }
 
 .profile-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 600 !important;
   color: var(--white);
 }
 
@@ -3910,7 +4482,7 @@ onMounted(() => {
 
 /* Sidebar Nav Items */
 .sidebar-nav {
-  padding: 0 10px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -3918,11 +4490,16 @@ onMounted(() => {
   overflow-y: auto;
 }
 
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
 .sidebar-nav-item {
   width: 100%;
+  padding: 10px 12px;
   background: none;
   border: none;
-  padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -3941,7 +4518,12 @@ onMounted(() => {
 }
 
 .sidebar-nav-item.parent {
-  justify-content: space-between;
+  justify-content: flex-start;
+}
+
+.sidebar-nav-item.parent-event .event-parent-text {
+  margin-right: auto;
+  text-align: left;
 }
 
 .group-chevron {
@@ -4060,7 +4642,7 @@ onMounted(() => {
 .dashboard-date-label {
   font-size: 10px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .dashboard-greeting-title {
@@ -4072,7 +4654,7 @@ onMounted(() => {
 
 .dashboard-subtitle {
   font-size: 11px;
-  color: #64748b;
+  color: #494a4a;
   line-height: 1.4;
   margin: 0;
 }
@@ -4176,7 +4758,7 @@ onMounted(() => {
 .metric-label {
   font-size: 10px;
   font-weight: 500;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .metric-value {
@@ -4193,7 +4775,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
+  color: #494a4a;
 }
 
 .metric-card-icon svg {
@@ -4440,7 +5022,7 @@ onMounted(() => {
   margin: -10px 0 8px 0; 
   white-space: nowrap;
 }
-.merch-empty-desc { font-size: 13px; color: #64748b; line-height: 1.6; margin: 0; }
+.merch-empty-desc { font-size: 13px; color: #494a4a; line-height: 1.6; margin: 0; }
 
 /* ===== HOME REDESIGN STYLES (Matching Image) ===== */
 .navbar-header.navbar-home {
@@ -4488,24 +5070,198 @@ onMounted(() => {
 }
 
 .nav-menu-lines-btn {
-  background: transparent;
-  border: none;
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  background-color: transparent;
+  border: none !important;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
+.nav-menu-lines-btn:hover {
+  background-color: #f0f6ff;
+}
+
+
 .menu-lines-icon {
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   color: #194e9e;
   transition: color 0.35s ease;
 }
 
 .navbar-scrolled .menu-lines-icon {
   color: #194e9e;
+}
+
+.language-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.language-btn.active {
+  background-color: rgba(25, 78, 158, 0.08);
+}
+
+.flag-icon-svg {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.language-btn:hover .flag-icon-svg {
+  transform: scale(1.1);
+}
+
+.lang-flag-svg {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.language-btn-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.language-popup-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 220px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.05);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform-origin: top right;
+}
+
+.language-popup-card::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 13px;
+  width: 10px;
+  height: 10px;
+  background-color: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+  transform: rotate(45deg);
+}
+
+.language-popup-header {
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pop-scale-enter-active,
+.pop-scale-leave-active {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pop-scale-enter-from,
+.pop-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.85) translateY(-10px);
+}
+
+.accordion-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #494a4a;
+  letter-spacing: 0.5px;
+}
+
+.language-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lang-option-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.lang-option-item:hover, .lang-option-item.active {
+  background-color: #f0f6ff;
+  border-color: #bfdbfe;
+}
+
+.lang-flag {
+  font-size: 16px;
+}
+
+.lang-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+  text-align: left;
+}
+
+.lang-check-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.home-search-bar {
+  display: flex;
+  align-items: center;
+  background-color: #f5f6f8;
+  border: 1px solid #e5e7eb;
+  border-radius: 50px;
+  padding: 0 12px;
+  height: 38px;
+  width: 100%;
+}
+
+.search-bar-icon {
+  width: 15px;
+  height: 15px;
+  margin-right: 8px;
+  stroke: #194e9e;
+  flex-shrink: 0;
+}
+
+.search-bar-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 11.5px;
+  color: #1f2937;
+  flex: 1;
+  width: 100%;
+}
+
+.header-search-pill {
+  height: 28px;
+  padding: 0 10px;
 }
 
 .account-text-info {
@@ -4526,13 +5282,13 @@ onMounted(() => {
 
 .account-subtitle {
   font-size: 8.5px;
-  color: #64748b;
+  color: #494a4a;
   opacity: 0.85;
   transition: color 0.35s ease;
 }
 
 .navbar-scrolled .account-subtitle {
-  color: #64748b;
+  color: #494a4a;
 }
 
 .nav-right-actions {

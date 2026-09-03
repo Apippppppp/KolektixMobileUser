@@ -153,14 +153,52 @@ const closeTicketModal = () => {
                 <h3 v-else class="event-card-title static">{{ event.title }}</h3>
               </div>
 
-              <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
-              <div class="meta-combined-row">
-                <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+              <!-- Combined Meta Row (Marquee Loop ONLY for VERY Long Meta > 34 chars) -->
+              <div v-if="((event.date || '') + (event.location || '')).length > 34" class="meta-combined-row meta-marquee-loop">
+                <div class="meta-marquee-track">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || '24 Agu 2026' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                </div>
+                <div class="meta-marquee-track" aria-hidden="true">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || '24 Agu 2026' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                </div>
+              </div>
+              <div v-else class="meta-combined-row">
+                <span class="meta-inline-text">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  {{ event.date || '24 Agu 2026' }}
+                </span>
+                <span class="meta-dot-separator">•</span>
+                <span class="meta-inline-text">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {{ event.location || 'Bandung' }}
+                </span>
               </div>
 
-              <!-- Price Row above creator (Aligned Right) -->
+              <!-- Price Row above creator (Strikethrough Red Line + Bold Red Price like Home page) -->
               <div class="card-price-top-row">
-                <span class="event-card-price">{{ event.price }}</span>
+                <div v-if="event.originalPrice" class="discount-price-column">
+                  <span class="event-card-original-price">{{ event.originalPrice }}</span>
+                  <span class="event-card-price price-discount">{{ event.price }}</span>
+                </div>
+                <span v-else class="event-card-price">{{ event.price }}</span>
               </div>
 
               <!-- Divider line between Price and Creator -->
@@ -170,7 +208,7 @@ const closeTicketModal = () => {
               <div class="creator-profile-row">
                 <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                 <div class="creator-text-wrap">
-                  <span class="creator-by-label">Diselenggarakan oleh:</span>
+                  <span class="creator-by-label">Diselenggarakan Oleh:</span>
                   <div class="creator-name-with-badge">
                     <span class="creator-name">{{ event.organizer }}</span>
                     <span class="verified-badge">
@@ -209,11 +247,11 @@ const closeTicketModal = () => {
           </button>
         </div>
 
-        <div class="events-horizontal-row">
+        <div class="events-vertical-list">
           <div 
             v-for="event in recommendedEvents" 
             :key="'rec-' + event.id" 
-            class="event-card home-card-style"
+            class="event-card home-card-style vertical-card-style"
             @click="handleLihatDetail(event)"
           >
             <!-- Card Thumbnail Area -->
@@ -235,14 +273,52 @@ const closeTicketModal = () => {
                 <h3 v-else class="event-card-title static">{{ event.title }}</h3>
               </div>
 
-              <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
-              <div class="meta-combined-row">
-                <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+              <!-- Combined Meta Row (Marquee Loop ONLY for VERY Long Meta > 34 chars) -->
+              <div v-if="((event.date || '') + (event.location || '')).length > 34" class="meta-combined-row meta-marquee-loop">
+                <div class="meta-marquee-track">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || '24 Agu 2026' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                </div>
+                <div class="meta-marquee-track" aria-hidden="true">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || '24 Agu 2026' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                </div>
+              </div>
+              <div v-else class="meta-combined-row">
+                <span class="meta-inline-text">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  {{ event.date || '24 Agu 2026' }}
+                </span>
+                <span class="meta-dot-separator">•</span>
+                <span class="meta-inline-text">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {{ event.location || 'Bandung' }}
+                </span>
               </div>
 
-              <!-- Price Row above creator (Aligned Right) -->
+              <!-- Price Row above creator (Strikethrough Red Line + Bold Red Price like uploaded image) -->
               <div class="card-price-top-row">
-                <span class="event-card-price">{{ event.price }}</span>
+                <div v-if="event.originalPrice" class="discount-price-column">
+                  <span class="event-card-original-price">{{ event.originalPrice }}</span>
+                  <span class="event-card-price price-discount">{{ event.price }}</span>
+                </div>
+                <span v-else class="event-card-price">{{ event.price }}</span>
               </div>
 
               <!-- Divider line between Price and Creator -->
@@ -252,7 +328,7 @@ const closeTicketModal = () => {
               <div class="creator-profile-row">
                 <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                 <div class="creator-text-wrap">
-                  <span class="creator-by-label">Diselenggarakan oleh:</span>
+                  <span class="creator-by-label">Diselenggarakan Oleh:</span>
                   <div class="creator-name-with-badge">
                     <span class="creator-name">{{ event.organizer }}</span>
                     <span class="verified-badge">
@@ -315,14 +391,52 @@ const closeTicketModal = () => {
                 <h3 v-else class="event-card-title static">{{ event.title }}</h3>
               </div>
 
-              <!-- Combined Meta Row (Date & Location side-by-side without icon, grey color) -->
-              <div class="meta-combined-row">
-                <span class="meta-inline-text">{{ event.date || 'Sat, 24 Aug 2024' }} | {{ event.location || 'Bandung' }}</span>
+              <!-- Combined Meta Row (Marquee Loop for Long Meta, Static for Short Meta) -->
+              <div v-if="((event.date || '') + (event.location || '')).length > 22" class="meta-combined-row meta-marquee-loop">
+                <div class="meta-marquee-track">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || '24 Agu 2026' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                </div>
+                <div class="meta-marquee-track" aria-hidden="true">
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ event.date || '24 Agu 2026' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                  <span class="meta-inline-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ event.location || 'Bandung' }}
+                  </span>
+                  <span class="meta-dot-separator">•</span>
+                </div>
+              </div>
+              <div v-else class="meta-combined-row">
+                <span class="meta-inline-text">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  {{ event.date || '24 Agu 2026' }}
+                </span>
+                <span class="meta-dot-separator">•</span>
+                <span class="meta-inline-text">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {{ event.location || 'Bandung' }}
+                </span>
               </div>
 
-              <!-- Price Row above creator (Aligned Right) -->
+              <!-- Price Row above creator (Strikethrough Red Line + Bold Red Price like Home page) -->
               <div class="card-price-top-row">
-                <span class="event-card-price">{{ event.price }}</span>
+                <div v-if="event.originalPrice" class="discount-price-column">
+                  <span class="event-card-original-price">{{ event.originalPrice }}</span>
+                  <span class="event-card-price price-discount">{{ event.price }}</span>
+                </div>
+                <span v-else class="event-card-price">{{ event.price }}</span>
               </div>
 
               <!-- Divider line between Price and Creator -->
@@ -332,7 +446,7 @@ const closeTicketModal = () => {
               <div class="creator-profile-row">
                 <img :src="event.creatorLogo" alt="Creator Profile" class="creator-avatar" />
                 <div class="creator-text-wrap">
-                  <span class="creator-by-label">Diselenggarakan oleh:</span>
+                  <span class="creator-by-label">Diselenggarakan Oleh:</span>
                   <div class="creator-name-with-badge">
                     <span class="creator-name">{{ event.organizer }}</span>
                     <span class="verified-badge">
@@ -659,7 +773,7 @@ const closeTicketModal = () => {
 }
 
 .status-badge.ended {
-  background-color: #64748b;
+  background-color: #494a4a;
   color: #ffffff;
 }
 
@@ -726,52 +840,124 @@ const closeTicketModal = () => {
 .creator-text-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0px;
+  gap: 2px;
   overflow: hidden;
+}
+
+/* VERTICAL CARD LIST FOR REKOMENDASI UNTUKMU (NO CARD BORDER) */
+.events-vertical-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 16px 12px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.vertical-card-style {
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.vertical-card-style:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.vertical-card-style .card-thumbnail-wrapper {
+  height: 125px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.vertical-card-style .event-thumbnail {
+  border-radius: 8px !important;
 }
 
 .creator-by-label {
-  font-size: 9px;
-  font-weight: 400; /* Non-bold */
-  color: #494a4a;
+  font-size: 6px !important;
+  font-weight: 400 !important;
+  color: #494a4a !important;
   white-space: nowrap;
-  line-height: 1.1;
-}
-
-.creator-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: #151416;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.2;
+  text-transform: none !important;
+  letter-spacing: 0.1px;
 }
 
 .meta-combined-row {
   display: flex;
   align-items: center;
-  margin-top: 1px;
+  gap: 6px;
+  margin-top: 2px;
   margin-bottom: 4px;
   width: 100%;
   overflow: hidden;
 }
 
 .meta-inline-text {
-  font-size: 11px;
-  font-weight: 400;
-  color: #494a4a; /* Updated grey color */
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #494a4a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.meta-inline-icon {
+  width: 12px;
+  height: 12px;
+  color: #194e9e;
+  flex-shrink: 0;
+}
+
+.meta-dot-separator {
+  color: #cbd5e1;
+  font-size: 10px;
+}
+
 .card-price-top-row {
   display: flex;
   justify-content: flex-end;
-  align-items: center;
+  align-items: flex-end;
   margin-top: 2px;
   width: 100%;
+}
+
+.discount-price-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.event-card-original-price {
+  font-size: 9px;
+  color: #494a4a;
+  text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  font-weight: 500;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.event-card-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #194e9e;
+  line-height: 1.1;
+}
+
+.event-card-price.price-discount {
+  color: #e52424 !important;
+  font-weight: 600;
 }
 
 .card-middle-divider {
@@ -805,13 +991,13 @@ const closeTicketModal = () => {
 .creator-name-with-badge {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .creator-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: #151416;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -863,7 +1049,7 @@ const closeTicketModal = () => {
 
 .empty-desc {
   font-size: 12px;
-  color: #64748b;
+  color: #494a4a;
   margin-bottom: 16px;
 }
 

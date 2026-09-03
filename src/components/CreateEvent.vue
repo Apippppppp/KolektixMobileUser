@@ -37,7 +37,7 @@ const availableTags = [
   { label: 'Wisata', color: '#059669' },
   { label: 'Kuliner', color: '#D97706' },
   { label: 'Religi', color: '#7C3AED' },
-  { label: 'Standup', color: '#DC2626' },
+  { label: 'Standup', color: '#e52424' },
   { label: 'Hiburan', color: '#EA580C' },
   { label: 'Pendidikan', color: '#0284C7' },
   { label: 'Budaya', color: '#16A34A' },
@@ -1312,7 +1312,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
 }
 .upload-sub-text {
   font-size: 10px;
-  color: #64748b;
+  color: #494a4a;
   margin: 0;
   line-height: 1.4;
 }
@@ -1516,7 +1516,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
 .alert-info-icon {
   width: 18px;
   height: 18px;
-  color: #64748b;
+  color: #494a4a;
   flex-shrink: 0;
 }
 .alert-info-text {
@@ -1566,12 +1566,12 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
 }
 .ticket-item-price {
   font-size: 12px;
-  color: #64748b;
+  color: #494a4a;
   font-weight: 600;
 }
 .delete-ticket-btn {
   background-color: #fee2e2;
-  color: #dc2626;
+  color: #e52424;
   border: none;
   width: 28px;
   height: 28px;
@@ -1669,7 +1669,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
 }
 .setting-row-sub {
   font-size: 11px;
-  color: #64748b;
+  color: #494a4a;
   line-height: 1.4;
 }
 
@@ -1829,7 +1829,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
 .toolbar-copy-icon {
   width: 14px;
   height: 14px;
-  color: #64748b;
+  color: #494a4a;
   cursor: pointer;
 }
 .rich-editor-textarea {
@@ -1905,7 +1905,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
   border: none;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: #494a4a;
   cursor: pointer;
   padding: 8px 12px;
 }
@@ -1948,7 +1948,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #64748b;
+  color: #494a4a;
 }
 .modal-x-icon {
   width: 16px;
@@ -2241,7 +2241,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
 }
 .ticket-trigger-helper-text {
   font-size: 12px;
-  color: #64748b;
+  color: #494a4a;
   font-weight: 500;
   text-align: center;
   font-family: var(--font-sans);
@@ -2326,7 +2326,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
   padding: 0;
   cursor: pointer;
   margin-left: 2px;
-  color: #64748b;
+  color: #494a4a;
   transition: color 0.15s;
 }
 .chip-remove-btn:active { color: #0f172a; }
@@ -2395,7 +2395,7 @@ watch(ticketQty, (val) => { if (val) ticketErrors.value.qty = ''; });
   border-radius: 6px;
   background-color: #FEF2F2;
   border: 1px solid #FECACA;
-  color: #DC2626;
+  color: #e52424;
   cursor: pointer;
   display: flex;
   align-items: center;
