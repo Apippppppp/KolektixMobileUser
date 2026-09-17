@@ -10,6 +10,9 @@ import Transaksi from './Transaksi.vue';
 import Explore from './Explore.vue';
 import Chat from './Chat.vue';
 import PersonalPemesan from './PersonalPemesan.vue';
+import AllMerch from './AllMerch.vue';
+import MerchDetail from './MerchDetail.vue';
+import Cart from './Cart.vue';
 import { Vue3Lottie } from 'vue3-lottie';
 
 const emit = defineEmits(['logout']);
@@ -17,8 +20,37 @@ const emit = defineEmits(['logout']);
 const searchQuery = ref('');
 const activeTab = ref('home');
 const selectedEvent = ref(null);
+const selectedMerch = ref(null);
 const activeChatTargetId = ref(null);
 const selectedTicketsData = ref({});
+
+const handleSelectMerch = (merch) => {
+  selectedMerch.value = merch;
+  activeTab.value = 'merch-detail';
+};
+
+const cartItems = ref([]);
+const cartCount = computed(() => cartItems.value.reduce((sum, item) => sum + (item.qty || 1), 0));
+
+const handleAddToCart = (merch, qty = 1, goToCart = true) => {
+  const key = merch.id + '__' + (merch.variant || 'default');
+  const existing = cartItems.value.find(item => (item.merch.id + '__' + (item.merch.variant || 'default')) === key);
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    cartItems.value.push({ merch, qty });
+  }
+  if (goToCart) activeTab.value = 'cart';
+};
+
+const handleUpdateCartQty = (merchId, qty) => {
+  const item = cartItems.value.find(i => i.merch.id === merchId);
+  if (item) item.qty = qty;
+};
+
+const handleRemoveCartItem = (merchId) => {
+  cartItems.value = cartItems.value.filter(i => i.merch.id !== merchId);
+};
 
 const handleSelectEvent = (evt) => {
   selectedEvent.value = evt;
@@ -95,9 +127,14 @@ const handleScroll = (e) => {
 };
 
 const handleSwitchTab = (tab, initialTab = 'aktif', initialEvent = null) => {
+  if (tab === 'all-merch' || tab === 'merch-detail' || tab === 'cart') {
+    activeTab.value = tab;
+    return;
+  }
   activeTab.value = tab;
-  checkinInitialTab.value = initialTab;
-  checkinInitialEvent.value = initialEvent;
+  if (typeof initialTab === 'string' && ['semua', 'aktif', 'draf', 'lalu'].includes(initialTab)) {
+    eventInitialFilter.value = initialTab;
+  }
 };
 
 // Handles back/done from CreateEvent component
@@ -328,7 +365,6 @@ const handleMouseUp = () => handleDragEnd();
 
 const isSidebarOpen = ref(false);
 const isSaldoOpen = ref(true);
-const isEventGroupOpen = ref(true);
 const isSearchOpen = ref(true);
 const isChatRoomActive = ref(false);
 const isLanguageOpen = ref(false);
@@ -855,11 +891,11 @@ onMounted(() => {
   <div class="mobile-wrapper">
     <!-- Top Nav Bar -->
     <!-- Top Nav Bar -->
-    <header v-if="activeTab !== 'event-detail' && activeTab !== 'personal-pemesan'" class="navbar-header" :class="{ 
-      'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile',
+    <header v-if="activeTab !== 'event-detail' && activeTab !== 'personal-pemesan' && activeTab !== 'merch-detail' && activeTab !== 'cart'" class="navbar-header" :class="{ 
+      'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile' || activeTab === 'all-merch',
       'navbar-scrolled': isScrolledFromTop 
     }">
-      <template v-if="activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile'">
+      <template v-if="activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile' || activeTab === 'all-merch'">
         <div class="home-nav-container">
           <!-- Top Row: Account Greeting & Action Buttons -->
           <div class="home-nav-top">
@@ -886,6 +922,14 @@ onMounted(() => {
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
+              </button>
+              <button v-if="activeTab === 'all-merch'" class="nav-icon-btn cart-btn" title="Keranjang" @click="activeTab = 'cart'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="header-action-icon">
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                <span v-if="cartCount > 0" class="cart-badge">{{ cartCount > 99 ? '99+' : cartCount }}</span>
               </button>
 
               <!-- Language Icon Button with floating popup card -->
@@ -1034,7 +1078,7 @@ onMounted(() => {
     </header>
 
     <!-- Main Scrollable Content Area -->
-    <main class="content-scroll-area" @scroll="handleScroll" :class="{ 'checkin-list-bg': activeTab === 'explore', 'dashboard-no-padding': activeTab === 'profile' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' }">
+    <main class="content-scroll-area" @scroll="handleScroll" :class="{ 'checkin-list-bg': activeTab === 'explore', 'dashboard-no-padding': activeTab === 'profile' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || activeTab === 'all-merch' || activeTab === 'merch-detail' || activeTab === 'cart' }">
       <!-- Personal Pemesan tab content template -->
       <template v-if="activeTab === 'personal-pemesan'">
         <PersonalPemesan :event="selectedEvent" :selected-tickets="selectedTicketsData.selectedTickets" :tickets-list="selectedTicketsData.tickets" @back="activeTab = 'event-detail'" />
@@ -1723,7 +1767,7 @@ onMounted(() => {
           </div>
 
           <!-- Section Official Merchandise (Layout 100% Identical to Event Cards) -->
-          <div class="top-events-header extra-section-header" @click="handleSwitchTab('event', 'merch', 'Merchandise Official')" style="cursor: pointer;">
+          <div class="top-events-header extra-section-header" @click="handleSwitchTab('all-merch')" style="cursor: pointer;">
             <div class="title-with-blue-icon">
               <div class="lottie-box-wrapper">
                 <lottie-player 
@@ -1737,7 +1781,7 @@ onMounted(() => {
               </div>
               <h2 class="top-events-title">Merchandise Official</h2>
             </div>
-            <button class="see-all-icon-btn" @click.stop="handleSwitchTab('event', 'merch', 'Merchandise Official')" title="Lihat Semua">
+            <button class="see-all-icon-btn" @click.stop="handleSwitchTab('all-merch')" title="Lihat Semua">
               <svg viewBox="0 0 24 24" fill="none" stroke="#194e9e" stroke-width="2.2" class="arrow-right-icon">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -1749,7 +1793,7 @@ onMounted(() => {
               v-for="merch in merchList" 
               :key="merch.id" 
               class="event-card merch-card"
-              @click="handleSwitchTab('event', 'aktif', null)"
+              @click="handleSelectMerch(merch)"
             >
               <!-- Card Thumbnail Area -->
               <div class="card-thumbnail-wrapper">
@@ -1839,9 +1883,18 @@ onMounted(() => {
 
       <!-- Create Event Component -->
       <CreateEvent v-else-if="activeTab === 'create-event'" @back="handleCreateEventBack" />
+
+      <!-- All Merch Component (mobile only) -->
+      <AllMerch v-else-if="activeTab === 'all-merch'" :merch-list="merchList" :cart-count="cartCount" :search-query="searchQuery" @update:searchQuery="searchQuery = $event" @back="activeTab = 'home'" @select-merch="handleSelectMerch" @open-cart="activeTab = 'cart'" />
+
+      <!-- Merch Detail Component (mobile only) -->
+      <MerchDetail v-else-if="activeTab === 'merch-detail'" :merch="selectedMerch" :merch-list="merchList" :cart-count="cartCount" @back="activeTab = 'all-merch'" @add-to-cart="handleAddToCart" @chat-creator="handleNavigateChat" @select-merch="handleSelectMerch" @open-cart="activeTab = 'cart'" />
+
+      <!-- Cart Component (mobile only) -->
+      <Cart v-else-if="activeTab === 'cart'" :cart-items="cartItems" @back="activeTab = 'all-merch'" @update-qty="handleUpdateCartQty" @remove-item="handleRemoveCartItem" @select-merch="handleSelectMerch" />
     </main>
 
-    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
+    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || activeTab === 'merch-detail' || activeTab === 'cart' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
       <button class="nav-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'" title="Home">
         <div class="nav-tab-content">
           <img src="/media/home (2).png" alt="Home Icon" class="tab-icon-image" />
@@ -1926,68 +1979,36 @@ onMounted(() => {
             <span>Beranda</span>
           </button>
 
-          <!-- Jelajah Event (Explore) -->
-          <button class="sidebar-nav-item" :class="{ active: activeTab === 'explore' }" @click="activeTab = 'explore'; isSidebarOpen = false">
+          <!-- Transaksi -->
+          <button class="sidebar-nav-item" :class="{ active: activeTab === 'transaksi' }" @click="activeTab = 'transaksi'; isSidebarOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+              <rect x="2" y="5" width="20" height="14" rx="3"/>
+              <line x1="2" y1="10" x2="22" y2="10"/>
+              <circle cx="16" cy="15" r="1.2" fill="currentColor"/>
             </svg>
-            <span>Jelajah Event</span>
+            <span>Transaksi</span>
           </button>
 
-          <!-- Expandable Event Item (Left Aligned Text) -->
-          <div class="sidebar-nav-group">
-            <button class="sidebar-nav-item parent parent-event" @click="isEventGroupOpen = !isEventGroupOpen">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <span class="event-parent-text">Event</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-chevron" :class="{ rotated: !isEventGroupOpen }">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
+          <!-- Event -->
+          <button class="sidebar-nav-item" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null); isSidebarOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>Event</span>
+          </button>
 
-            <!-- Submenu Items -->
-            <div v-show="isEventGroupOpen" class="sidebar-sub-items">
-              <button class="sidebar-sub-item" :class="{ active: activeTab === 'event' }" @click="handleSwitchTab('event', 'aktif', null); isSidebarOpen = false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <span>Event Saya</span>
-              </button>
-              
-              <button class="sidebar-sub-item" :class="{ active: activeTab === 'Checkin' && checkinInitialTab !== 'report' }" @click="handleSwitchTab('Checkin', 'aktif', null); isSidebarOpen = false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
-                  <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" stroke-linecap="round" stroke-linejoin="round" />
-                  <line x1="6" y1="12" x2="18" y2="12" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <span>Check In Event</span>
-              </button>
-
-              <button class="sidebar-sub-item" :class="{ active: activeTab === 'Checkin' && checkinInitialTab === 'report' }" @click="handleSwitchTab('Checkin', 'report', null); isSidebarOpen = false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                </svg>
-                <span>Check In Report</span>
-              </button>
-
-              <button class="sidebar-sub-item" @click="activeTab = 'event'; isSidebarOpen = false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sub-icon">
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-                </svg>
-                <span>Report Event</span>
-              </button>
-            </div>
-          </div>
+          <!-- Merch -->
+          <button class="sidebar-nav-item" :class="{ active: activeTab === 'all-merch' || activeTab === 'merch-detail' || activeTab === 'cart' }" @click="activeTab = 'all-merch'; isSidebarOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            <span>Merch</span>
+          </button>
 
           <!-- Bantuan & Chat -->
           <button class="sidebar-nav-item" :class="{ active: activeTab === 'chat' }" @click="activeTab = 'chat'; isSidebarOpen = false">
@@ -4490,11 +4511,6 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-.sidebar-nav-group {
-  display: flex;
-  flex-direction: column;
-}
-
 .sidebar-nav-item {
   width: 100%;
   padding: 10px 12px;
@@ -4515,61 +4531,6 @@ onMounted(() => {
 .sidebar-nav-item:hover, .sidebar-nav-item.active {
   background-color: rgba(255,255,255,0.08);
   color: var(--white);
-}
-
-.sidebar-nav-item.parent {
-  justify-content: flex-start;
-}
-
-.sidebar-nav-item.parent-event .event-parent-text {
-  margin-right: auto;
-  text-align: left;
-}
-
-.group-chevron {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.2s;
-  color: rgba(255,255,255,0.5);
-}
-
-.group-chevron.rotated {
-  transform: rotate(-90deg);
-}
-
-.sidebar-sub-items {
-  padding-left: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 6px;
-}
-
-.sidebar-sub-item {
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 8px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 6px;
-  color: rgba(255,255,255,0.5);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-}
-
-.sidebar-sub-item:hover, .sidebar-sub-item.active {
-  color: var(--white);
-  background-color: rgba(255,255,255,0.04);
-}
-
-.sub-icon {
-  width: 12px;
-  height: 12px;
 }
 
 .sidebar-footer {
@@ -4939,55 +4900,6 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.sidebar-nav-group {
-  display: flex;
-  flex-direction: column;
-}
-.sidebar-nav-item.parent {
-  justify-content: space-between;
-}
-.group-chevron {
-  width: 16px;
-  height: 16px;
-  transition: transform 0.2s;
-}
-.group-chevron.rotated {
-  transform: rotate(-90deg);
-}
-
-.sidebar-sub-items {
-  display: flex;
-  flex-direction: column;
-  padding-left: 20px;
-  background-color: rgba(0, 0, 0, 0.15);
-}
-.sidebar-sub-item {
-  width: 100%;
-  background: transparent;
-  border: none;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13.5px;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s;
-}
-.sidebar-sub-item:hover {
-  color: white;
-}
-.sidebar-sub-item.active {
-  color: white;
-  font-weight: 600;
-}
-.sidebar-sub-item .sub-icon {
-  width: 16px;
-  height: 16px;
-  color: white;
-}
-
 .sidebar-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background-color: #061d4a;
@@ -5058,8 +4970,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   width: 100%;
+  max-width: 100%;
   padding: 4px 0 2px 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .account-group {
@@ -5067,6 +4983,9 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .nav-menu-lines-btn {
@@ -5267,6 +5186,9 @@ onMounted(() => {
 .account-text-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .account-name {
@@ -5274,6 +5196,10 @@ onMounted(() => {
   font-weight: 600;
   color: #0f172a;
   transition: color 0.35s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .navbar-scrolled .account-name {
@@ -5295,6 +5221,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
 }
 
 .nav-icon-btn {
@@ -5317,6 +5244,9 @@ onMounted(() => {
 .search-toggle-btn.active {
   background-color: rgba(25, 78, 158, 0.08);
 }
+
+.cart-btn { position: relative; flex-shrink: 0; }
+.cart-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #e52424; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
 
 .header-action-icon {
   width: 22px;
