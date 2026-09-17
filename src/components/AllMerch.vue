@@ -84,7 +84,11 @@ onMounted(() => {
               <span class="review-text">{{ merch.rating || '4.9' }} ({{ merch.reviewCount || '120' }} ulasan)</span>
             </div>
             <div class="card-price-top-row">
-              <span class="event-card-price">{{ merch.price }}</span>
+              <div v-if="merch.originalPrice" class="discount-price-column">
+                <span class="event-card-original-price">{{ merch.originalPrice }}</span>
+                <span class="event-card-price price-discount">{{ merch.price }}</span>
+              </div>
+              <span v-else class="event-card-price">{{ merch.price }}</span>
             </div>
             <div class="card-middle-divider"></div>
             <div class="creator-profile-row">
@@ -137,7 +141,10 @@ onMounted(() => {
 .review-star-icon { width: 13px; height: 13px; flex-shrink: 0; }
 .review-text { font-size: 11px; font-weight: 500; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-price-top-row { display: flex; justify-content: flex-end; width: 100%; }
+.discount-price-column { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.event-card-original-price { font-size: 9px; color: #494a4a; text-decoration: line-through; text-decoration-color: #ef4444; font-weight: 500; line-height: 1.1; white-space: nowrap; }
 .event-card-price { font-size: 13px; font-weight: 700; color: #000; }
+.event-card-price.price-discount { color: #e52424 !important; font-weight: 600; }
 .card-middle-divider { height: 1px; background: #f1f5f9; margin: 4px 0; width: 100%; }
 .creator-profile-row { display: flex; align-items: center; gap: 6px; }
 .creator-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid #dbeafe; flex-shrink: 0; }

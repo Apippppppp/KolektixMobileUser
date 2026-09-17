@@ -7,16 +7,25 @@ const props = defineProps({
   cartCount: { type: Number, default: 0 }
 });
 
-const emit = defineEmits(['back', 'add-to-cart', 'chat-creator', 'select-merch', 'open-cart']);
+const emit = defineEmits(['back', 'add-to-cart', 'chat-creator', 'select-merch', 'open-cart', 'buy-now']);
+const isScrolled = ref(false);
 const bannerIndex = ref(0);
 const bannerRef = ref(null);
+const titleRef = ref(null);
+const titlePassed = ref(false);
 const selectedVariant = ref(null);
 const isReviewAllOpen = ref(false);
 const selectedRating = ref(0);
 const previewImage = ref(null);
+const showToast = ref(false);
+let toastTimer = null;
 const isVariantSheetOpen = ref(false);
 const sheetVariant = ref(null);
 const sheetQty = ref(1);
+const sheetRef = ref(null);
+const sheetDragY = ref(0);
+let dragStartY = 0;
+let draggingSheet = false;
 
 const merchImages = computed(() => {
   const m = props.merch || {};
@@ -44,10 +53,24 @@ const merchImages = computed(() => {
 
 const variants = computed(() => {
   const m = props.merch || {};
-  if (Array.isArray(m.variants) && m.variants.length > 0) return m.variants;
+  if (Array.isArray(m.variants) && m.variants.length > 0) return m.variants.map(v => typeof v === 'string' ? v : (v.name ?? v.size ?? v.label ?? String(v)));
   if (Array.isArray(m.sizes) && m.sizes.length > 0) return m.sizes;
   return ['S', 'M', 'L', 'XL'];
 });
+
+// ponytail: stok fallback statis (L=0 untuk demo habis); ganti ke m.variantStock dari API saat tersedia
+const variantOptions = computed(() => {
+  const m = props.merch || {};
+  const stockMap = m.variantStock || m.variant_stock || null;
+  const fallback = { S: 12, M: 8, L: 0, XL: 5 };
+  return variants.value.map(name => {
+    let stock = fallback[name] ?? 10;
+    if (stockMap && stockMap[name] != null) stock = Number(stockMap[name]);
+    return { name, stock };
+  });
+});
+
+const sheetStock = computed(() => variantOptions.value.find(o => o.name === sheetVariant.value)?.stock ?? 0);
 
 const allReviews = computed(() => {
   const m = props.merch || {};
@@ -77,6 +100,14 @@ const handleBannerScroll = (e) => {
   bannerIndex.value = Math.round(el.scrollLeft / w);
 };
 
+const handleDetailScroll = (e) => {
+  const st = e.target.scrollTop || 0;
+  isScrolled.value = st > 80;
+  const titleEl = titleRef.value;
+  if (titleEl) titlePassed.value = (titleEl.offsetTop - st) < 56;
+  else titlePassed.value = st > 300;
+};
+
 const goToBanner = (idx) => {
   const el = bannerRef.value;
   if (!el) return;
@@ -89,43 +120,85 @@ watch(() => props.merch?.id, () => {
   isReviewAllOpen.value = false;
   selectedRating.value = 0;
   isVariantSheetOpen.value = false;
+  isScrolled.value = false;
+  titlePassed.value = false;
 });
 
 const handleBack = () => emit('back');
 const handleChat = () => emit('chat-creator', props.merch);
 const handleSelectOther = (m) => emit('select-merch', m);
 
+const sheetMode = ref('buy');
+
 const handleAddToCartBtn = () => {
-  emit('add-to-cart', { ...props.merch, variant: selectedVariant.value }, 1, true);
+  openVariantSheet('cart');
 };
 
-const openVariantSheet = () => {
-  sheetVariant.value = selectedVariant.value || variants.value[0] || null;
+const showToastMsg = () => {
+  showToast.value = true;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { showToast.value = false; }, 2000);
+};
+
+const openVariantSheet = (mode = 'buy') => {
+  sheetMode.value = mode;
+  const available = variantOptions.value.find(o => o.stock > 0);
+  const currentOk = variantOptions.value.some(o => o.name === selectedVariant.value && o.stock > 0);
+  sheetVariant.value = currentOk ? selectedVariant.value : (available?.name || null);
   sheetQty.value = 1;
+  sheetDragY.value = 0;
   isVariantSheetOpen.value = true;
 };
 
-const closeVariantSheet = () => { isVariantSheetOpen.value = false; };
-const sheetInc = () => { sheetQty.value++; };
+const closeVariantSheet = () => { isVariantSheetOpen.value = false; sheetDragY.value = 0; draggingSheet = false; };
+const sheetInc = () => { if (sheetQty.value < sheetStock.value) sheetQty.value++; };
 const sheetDec = () => { if (sheetQty.value > 1) sheetQty.value--; };
+
+const startSheetDrag = (y) => { draggingSheet = true; dragStartY = y; };
+const moveSheetDrag = (y) => {
+  if (!draggingSheet) return;
+  const dy = y - dragStartY;
+  sheetDragY.value = dy > 0 ? dy : 0;
+};
+const endSheetDrag = () => {
+  if (!draggingSheet) return;
+  draggingSheet = false;
+  if (sheetDragY.value > 110) closeVariantSheet();
+  else sheetDragY.value = 0;
+};
+const onSheetTouchStart = (e) => startSheetDrag(e.touches[0].clientY);
+const onSheetTouchMove = (e) => moveSheetDrag(e.touches[0].clientY);
+const onSheetMouseDown = (e) => startSheetDrag(e.clientY);
+const onSheetMouseMove = (e) => moveSheetDrag(e.clientY);
 
 const confirmBuyFromSheet = () => {
   if (!sheetVariant.value && variants.value.length > 0) return;
   selectedVariant.value = sheetVariant.value;
   isVariantSheetOpen.value = false;
-  emit('add-to-cart', { ...props.merch, variant: sheetVariant.value }, sheetQty.value, true);
+  if (sheetMode.value === 'cart') {
+    emit('add-to-cart', { ...props.merch, variant: sheetVariant.value }, sheetQty.value, false);
+    showToastMsg();
+  } else {
+    emit('buy-now', { merch: { ...props.merch, variant: sheetVariant.value }, qty: sheetQty.value });
+  }
 };
 </script>
 
 <template>
   <div class="merch-detail-page">
-    <div class="detail-header">
+    <div class="detail-header" :class="{ 'scrolled-header': isScrolled }">
       <button class="back-btn" @click="handleBack" title="Kembali">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="#194e9e" class="header-icon">
           <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
         </svg>
       </button>
-      <h1 class="header-title">Detail Merch</h1>
+      <div v-if="!titlePassed" class="header-title-container">
+        <h1 class="header-title">Detail Merch</h1>
+      </div>
+      <div v-else class="header-scrolled-info">
+        <h2 class="scrolled-event-title">{{ merch.title || 'Official Merchandise' }}</h2>
+        <span class="scrolled-event-meta">{{ merch.organizer || 'Kolektix Official' }}</span>
+      </div>
       <button class="nav-icon-btn cart-btn" title="Keranjang" @click="emit('open-cart')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="header-action-icon">
           <circle cx="9" cy="21" r="1"></circle>
@@ -136,7 +209,7 @@ const confirmBuyFromSheet = () => {
       </button>
     </div>
 
-    <div class="detail-scroll">
+    <div class="detail-scroll" @scroll="handleDetailScroll">
       <div class="detail-banner">
         <div ref="bannerRef" class="banner-scroll" @scroll="handleBannerScroll">
           <img v-for="(img, idx) in merchImages" :key="idx" :src="img" :alt="merch.title" class="banner-img" />
@@ -148,14 +221,17 @@ const confirmBuyFromSheet = () => {
       </div>
 
       <div class="detail-body">
-        <h2 class="detail-title">{{ merch.title || 'Official Merchandise' }}</h2>
+        <h2 ref="titleRef" class="detail-title">{{ merch.title || 'Official Merchandise' }}</h2>
         <div class="merch-review-row">
           <svg viewBox="0 0 24 24" fill="#F59E0B" class="review-star-icon"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
           <span class="review-text">{{ merch.rating || '4.9' }} ({{ merch.reviewCount || allReviews.length }} ulasan)</span>
           <span class="meta-dot-separator">•</span>
           <span class="review-text">{{ merch.stockStr || 'Tersedia' }}</span>
         </div>
-        <div class="detail-price">{{ merch.price || 'Rp0' }}</div>
+        <div class="detail-price-row">
+          <span v-if="merch.originalPrice" class="detail-original-price">{{ merch.originalPrice }}</span>
+          <div class="detail-price" :class="{ 'price-discount': merch.originalPrice }">{{ merch.price || 'Rp0' }}</div>
+        </div>
         <div class="card-middle-divider"></div>
         <div class="creator-profile-row">
           <img :src="merch.creatorLogo" alt="Creator" class="creator-avatar" />
@@ -235,8 +311,17 @@ const confirmBuyFromSheet = () => {
 
     <div class="detail-footer">
       <button class="cart-outline-btn single-line" @click="handleAddToCartBtn"><span>Keranjang</span></button>
-      <button class="buy-btn single-line" @click="openVariantSheet"><span>Beli Sekarang</span></button>
+      <button class="buy-btn single-line" @click="openVariantSheet('buy')"><span>Beli Sekarang</span></button>
     </div>
+
+    <transition name="toast-fade">
+      <div v-if="showToast" class="cart-toast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="toast-check">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Berhasil masuk keranjang</span>
+      </div>
+    </transition>
 
     <transition name="sheet-slide">
       <div v-if="isReviewAllOpen" class="review-all-page">
@@ -295,57 +380,51 @@ const confirmBuyFromSheet = () => {
     </transition>
 
     <transition name="sheet-fade">
-      <div v-if="isVariantSheetOpen" class="sheet-overlay" @click="closeVariantSheet"></div>
+      <div v-if="isVariantSheetOpen" class="sheet-overlay" @click="closeVariantSheet" @touchmove.prevent @wheel.prevent></div>
     </transition>
     <transition name="sheet-slide">
-      <div v-if="isVariantSheetOpen" class="variant-sheet">
+      <div v-if="isVariantSheetOpen" ref="sheetRef" class="variant-sheet" :style="sheetDragY > 0 ? { transform: `translateY(${sheetDragY}px)` } : {}">
+        <div class="sheet-drag-zone" @touchstart="onSheetTouchStart" @touchmove="onSheetTouchMove" @touchend="endSheetDrag" @mousedown="onSheetMouseDown" @mousemove="onSheetMouseMove" @mouseup="endSheetDrag" @mouseleave="endSheetDrag">
+          <span class="sheet-drag-handle"></span>
+        </div>
         <div class="sheet-header">
           <button class="sheet-close-btn" @click="closeVariantSheet" title="Tutup">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#151416" stroke-width="2.4" stroke-linecap="round" class="sheet-close-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2.4" stroke-linecap="round" class="sheet-close-icon">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
-          <h2 class="sheet-title">Pilih varian</h2>
+          <h2 class="sheet-title">Pilih Varian</h2>
         </div>
 
         <div class="sheet-product-row">
           <img :src="merchImages[0]" :alt="merch.title" class="sheet-thumb" />
           <div class="sheet-product-info">
-            <div class="sheet-price">{{ merch.price || 'Rp0' }}</div>
+            <span v-if="merch.originalPrice" class="sheet-original-price">{{ merch.originalPrice }}</span>
+            <div class="sheet-price" :class="{ 'price-discount': merch.originalPrice }">{{ merch.price || 'Rp0' }}</div>
             <div class="sheet-stock">{{ merch.stockStr || 'Stok tersedia' }}</div>
             <div v-if="sheetVariant" class="sheet-selected-variant">{{ sheetVariant }}</div>
           </div>
         </div>
 
-        <div class="sheet-hype-banner">
-          <svg viewBox="0 0 24 24" fill="#ea580c" class="hype-icon"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 8a7 7 0 0 1 14 0v1H5v-1z"/></svg>
-          <span class="hype-text">Ramai pelanggan! <strong>10+ orang beli lagi</strong></span>
-        </div>
 
-        <div class="sheet-variant-label">VARIAN: <span class="sheet-variant-value">{{ sheetVariant || '-' }}</span></div>
+        <div class="sheet-variant-label">Varian: <span class="sheet-variant-value">{{ sheetVariant || '-' }}</span></div>
         <div class="sheet-variant-list">
-          <button v-for="v in variants" :key="v" class="sheet-variant-btn" :class="{ active: sheetVariant === v }" @click="sheetVariant = v">
-            <img :src="merchImages[0]" :alt="v" class="sheet-variant-thumb" loading="lazy" />
-            <span class="sheet-variant-name">{{ v }}</span>
-            <span v-if="sheetVariant === v" class="sheet-variant-check">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </span>
+          <button v-for="o in variantOptions" :key="o.name" class="sheet-variant-btn" :class="{ active: sheetVariant === o.name, soldout: o.stock <= 0 }" :disabled="o.stock <= 0" @click="sheetVariant = o.name; sheetQty = 1">
+            <span class="sheet-variant-name">{{ o.name }}</span>
           </button>
         </div>
 
         <div class="sheet-qty-row">
-          <span class="qty-label">Jumlah</span>
-          <div class="qty-control">
-            <button class="qty-btn" @click="sheetDec">−</button>
+          <span class="qty-label">Jumlah<span v-if="sheetVariant" class="qty-stock"> (Stok: {{ sheetStock }})</span></span>
+          <div class="qty-control" :class="{ disabled: sheetStock <= 0 }">
+            <button class="qty-btn" @click="sheetDec" :disabled="sheetStock <= 0 || sheetQty <= 1">−</button>
             <span class="qty-value">{{ sheetQty }}</span>
-            <button class="qty-btn" @click="sheetInc">+</button>
+            <button class="qty-btn" @click="sheetInc" :disabled="sheetStock <= 0 || sheetQty >= sheetStock">+</button>
           </div>
         </div>
 
-        <button class="sheet-buy-btn" :disabled="!sheetVariant" @click="confirmBuyFromSheet">Beli Sekarang</button>
+        <button class="sheet-buy-btn" :disabled="!sheetVariant || sheetStock <= 0" @click="confirmBuyFromSheet">{{ sheetStock <= 0 && sheetVariant ? 'Stok Habis' : (sheetMode === 'cart' ? 'Masukkan Keranjang' : 'Beli Sekarang') }}</button>
       </div>
     </transition>
   </div>
@@ -354,11 +433,16 @@ const confirmBuyFromSheet = () => {
 <style scoped>
 .merch-detail-page { display: flex; flex-direction: column; width: 100%; height: 100%; background: #fcfcfd; font-family: 'Poppins', sans-serif; position: relative; overflow: hidden; }
 .detail-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #f1f5f9; position: sticky; top: 0; z-index: 20; }
+.detail-header.scrolled-header { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .back-btn { width: 36px; height: 36px; border-radius: 50%; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .header-icon { width: 20px; height: 20px; }
-.header-title { font-size: 15px; font-weight: 600; color: #151416; margin: 0; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.nav-icon-btn { background: transparent; border: none; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; padding: 4px; border-radius: 8px; }
-.header-action-icon { width: 22px; height: 22px; color: #194e9e; }
+.header-title-container { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.header-title { font-size: 15px; font-weight: 600; color: #151416; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.header-scrolled-info { display: flex; flex-direction: column; align-items: flex-start; text-align: left; flex: 1; margin: 0 4px; overflow: hidden; min-width: 0; }
+.scrolled-event-title { font-size: 14px; font-weight: 600; color: #0f172a; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+.scrolled-event-meta { font-size: 10px; font-weight: 500; color: #494a4a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+.nav-icon-btn { background: transparent; border: none; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; padding: 0; border-radius: 50%; width: 36px; height: 36px; flex-shrink: 0; }
+.header-action-icon { width: 20px; height: 20px; color: #194e9e; }
 .cart-btn { position: relative; flex-shrink: 0; }
 .cart-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #e52424; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-sizing: border-box; z-index: 1; }
 .header-spacer { width: 36px; flex-shrink: 0; }
@@ -379,16 +463,19 @@ const confirmBuyFromSheet = () => {
 .review-star-icon.small { width: 11px; height: 11px; }
 .review-text { font-size: 11.5px; font-weight: 400; color: #475569; text-transform: none; }
 .meta-dot-separator { color: #cbd5e1; font-size: 11px; }
+.detail-price-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.detail-original-price { font-size: 12px; color: #494a4a; text-decoration: line-through; text-decoration-color: #ef4444; font-weight: 500; line-height: 1.2; }
 .detail-price { font-size: 18px; font-weight: 700; color: #000; text-transform: none; }
+.detail-price.price-discount { color: #e52424; }
 .card-middle-divider { height: 1px; background: #f1f5f9; width: 100%; }
 .creator-profile-row { display: flex; align-items: center; gap: 8px; }
-.creator-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #dbeafe; flex-shrink: 0; }
-.creator-text-wrap { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-width: 0; }
-.creator-by-label { font-size: 10px; font-weight: 400; color: #64748b; text-transform: none; }
+.creator-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.creator-text-wrap { display: flex; flex-direction: column; gap: 2px; overflow: hidden; flex: 1; min-width: 0; }
+.creator-by-label { font-size: 6px; font-weight: 400; color: #494a4a; }
 .creator-name-with-badge { display: flex; align-items: center; gap: 4px; }
-.creator-name { font-size: 12.5px; font-weight: 500; color: #151416; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.verified-badge { color: #2196F3; display: inline-flex; }
-.verified-check-svg { width: 13px; height: 13px; }
+.creator-name { font-size: 11.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.verified-badge { color: #2196F3; display: inline-flex; flex-shrink: 0; }
+.verified-check-svg { width: 14px; height: 14px; flex-shrink: 0; }
 .creator-chat-btn { width: 38px; height: 38px; border-radius: 50%; background: transparent; border: none; outline: none; box-shadow: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-left: auto; padding: 0; }
 .creator-chat-icon { width: 20px; height: 20px; }
 .section-label { font-size: 13px; font-weight: 600; color: #151416; margin: 6px 0 0 0; text-transform: none; }
@@ -422,6 +509,10 @@ const confirmBuyFromSheet = () => {
 .buy-btn { flex: 1; min-width: 0; height: 38px; border: none; border-radius: 10px; background: #194e9e; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; padding: 0 8px; }
 .single-line { white-space: nowrap; overflow: hidden; }
 .single-line span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1; }
+.cart-toast { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(15,23,42,0.92); color: #fff; font-size: 12px; font-weight: 600; padding: 10px 16px; border-radius: 999px; z-index: 55; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+.toast-check { width: 15px; height: 15px; flex-shrink: 0; }
+.toast-fade-enter-active, .toast-fade-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.toast-fade-enter-from, .toast-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(8px); }
 .review-images { display: flex; gap: 6px; margin-top: 6px; }
 .review-img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: #f1f5f9; cursor: zoom-in; }
 .filter-star { color: #F59E0B; font-size: 13px; }
@@ -441,38 +532,45 @@ const confirmBuyFromSheet = () => {
 .empty-merch-state { display: flex; flex-direction: column; align-items: center; padding: 48px 24px; text-align: center; gap: 8px; }
 .empty-title { font-size: 15px; font-weight: 600; color: #0f172a; margin: 0; }
 .empty-desc { font-size: 12px; color: #64748b; margin: 0; }
-.sheet-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.45); z-index: 40; }
-.variant-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 88%; background: #fff; border-radius: 20px 20px 0 0; z-index: 41; display: flex; flex-direction: column; padding: 12px 16px 16px 16px; overflow: hidden; }
-.sheet-header { display: flex; align-items: center; gap: 12px; padding: 4px 0 12px 0; }
-.sheet-close-btn { background: none; border: none; cursor: pointer; padding: 4px; display: flex; }
-.sheet-close-icon { width: 22px; height: 22px; }
-.sheet-title { font-size: 17px; font-weight: 700; color: #151416; margin: 0; }
-.sheet-product-row { display: flex; gap: 12px; align-items: flex-start; }
-.sheet-thumb { width: 88px; height: 88px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #f1f5f9; }
-.sheet-product-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.sheet-price { font-size: 20px; font-weight: 800; color: #194e9e; }
-.sheet-stock { font-size: 11.5px; font-weight: 400; color: #64748b; }
-.sheet-selected-variant { display: inline-block; font-size: 11.5px; font-weight: 600; color: #194e9e; background: #f0f6ff; border-radius: 6px; padding: 3px 8px; align-self: flex-start; }
-.sheet-hype-banner { display: flex; align-items: center; gap: 8px; background: #fff7ed; border-radius: 10px; padding: 9px 12px; margin-top: 12px; }
-.hype-icon { width: 18px; height: 18px; flex-shrink: 0; }
-.hype-text { font-size: 12.5px; color: #ea580c; }
-.sheet-variant-label { font-size: 13px; font-weight: 700; color: #151416; margin-top: 14px; text-transform: uppercase; }
+.sheet-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.45); z-index: 40; touch-action: none; overscroll-behavior: contain; }
+.variant-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 88%; background: #fff; border-radius: 20px 20px 0 0; z-index: 41; display: flex; flex-direction: column; padding: 6px 16px 16px 16px; overflow: hidden; font-family: 'Poppins', sans-serif; color: #0f172a; box-shadow: 0 -8px 30px rgba(15,23,42,0.12); }
+.sheet-drag-zone { display: flex; align-items: center; justify-content: center; padding: 6px 0 4px 0; cursor: grab; touch-action: none; }
+.sheet-drag-handle { width: 40px; height: 4px; border-radius: 999px; background: #e2e8f0; }
+.sheet-header { display: flex; align-items: center; gap: 10px; padding: 6px 0 10px 0; }
+.sheet-close-btn { background: #f1f5f9; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sheet-close-icon { width: 15px; height: 15px; }
+.sheet-title { font-size: 14px; font-weight: 600; color: #0f172a; margin: 0; font-family: 'Poppins', sans-serif; }
+.sheet-product-row { display: flex; gap: 12px; align-items: stretch; background: transparent; border: none; border-radius: 0; padding: 0; }
+.sheet-thumb { width: 64px; min-height: 64px; height: auto; align-self: stretch; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #f1f5f9; }
+.sheet-product-info { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; flex: 1; }
+.sheet-original-price { font-size: 11px; color: #494a4a; text-decoration: line-through; text-decoration-color: #ef4444; font-weight: 500; line-height: 1.2; font-family: 'Poppins', sans-serif; }
+.sheet-price { font-size: 15px; font-weight: 700; color: #0f172a; font-family: 'Poppins', sans-serif; }
+.sheet-price.price-discount { color: #e52424; }
+.sheet-stock { font-size: 11px; font-weight: 400; color: #64748b; font-family: 'Poppins', sans-serif; }
+.sheet-selected-variant { display: inline-block; font-size: 11px; font-weight: 600; color: #194e9e; background: #f0f6ff; border-radius: 6px; padding: 3px 8px; align-self: flex-start; font-family: 'Poppins', sans-serif; }
+.sheet-hype-banner { display: flex; align-items: center; gap: 8px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 8px 12px; margin-top: 10px; }
+.hype-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.hype-text { font-size: 11.5px; font-weight: 400; color: #9a3412; font-family: 'Poppins', sans-serif; }
+.sheet-variant-label { font-size: 12px; font-weight: 600; color: #0f172a; margin-top: 12px; font-family: 'Poppins', sans-serif; text-transform: none; }
 .sheet-variant-value { color: #64748b; font-weight: 500; }
-.sheet-variant-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; overflow-y: auto; max-height: 280px; scrollbar-width: none; padding-bottom: 4px; }
+.sheet-variant-list { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-top: 8px; overflow-y: auto; max-height: 260px; scrollbar-width: none; padding-bottom: 4px; }
 .sheet-variant-list::-webkit-scrollbar { display: none; }
-.sheet-variant-btn { position: relative; display: flex; align-items: center; gap: 12px; background: #f1f5f9; border: 1.5px solid transparent; border-radius: 999px; padding: 8px 14px 8px 8px; cursor: pointer; font-family: inherit; text-align: left; }
+.sheet-variant-btn { position: relative; display: flex; align-items: center; justify-content: center; min-width: 52px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 9px 16px; cursor: pointer; font-family: 'Poppins', sans-serif; text-align: center; }
 .sheet-variant-btn.active { background: #f0f6ff; border-color: #194e9e; }
-.sheet-variant-thumb { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #fff; }
-.sheet-variant-name { font-size: 13.5px; font-weight: 600; color: #151416; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-variant-btn.soldout { background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+.sheet-variant-name { font-size: 12.5px; font-weight: 600; color: #0f172a; white-space: nowrap; font-family: 'Poppins', sans-serif; }
 .sheet-variant-btn.active .sheet-variant-name { color: #194e9e; }
-.sheet-variant-check { position: absolute; top: -6px; right: 10px; width: 20px; height: 20px; border-radius: 50%; background: #194e9e; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
-.check-icon { width: 11px; height: 11px; }
+.sheet-variant-btn.soldout .sheet-variant-name { color: #94a3b8; text-decoration: line-through; }
+.check-icon { width: 10px; height: 10px; }
 .sheet-qty-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
-.qty-label { font-size: 13px; font-weight: 600; color: #151416; }
+.qty-label { font-size: 12.5px; font-weight: 600; color: #0f172a; font-family: 'Poppins', sans-serif; }
+.qty-stock { font-weight: 500; color: #64748b; }
 .qty-control { display: flex; align-items: center; gap: 12px; background: #f1f5f9; border-radius: 20px; padding: 4px 8px; }
-.qty-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: #fff; font-size: 16px; font-weight: 700; color: #194e9e; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-.qty-value { font-size: 14px; font-weight: 700; color: #0f172a; min-width: 20px; text-align: center; }
-.sheet-buy-btn { width: 100%; height: 48px; border: none; border-radius: 12px; background: #194e9e; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 12px; }
+.qty-control.disabled { opacity: 0.5; }
+.qty-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: #fff; font-size: 16px; font-weight: 700; color: #194e9e; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; font-family: 'Poppins', sans-serif; }
+.qty-btn:disabled { color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+.qty-value { font-size: 13px; font-weight: 700; color: #0f172a; min-width: 20px; text-align: center; font-family: 'Poppins', sans-serif; }
+.sheet-buy-btn { width: 100%; height: 44px; border: none; border-radius: 12px; background: #194e9e; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif; margin-top: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sheet-buy-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .sheet-fade-enter-active, .sheet-fade-leave-active { transition: opacity 0.25s ease; }
 .sheet-fade-enter-from, .sheet-fade-leave-to { opacity: 0; }

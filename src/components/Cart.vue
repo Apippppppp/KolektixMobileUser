@@ -71,7 +71,7 @@ const dec = (item) => {
   if ((item.qty || 1) > 1) emit('update-qty', item.merch.id, item.qty - 1);
 };
 const remove = (item) => emit('remove-item', item.merch.id);
-const checkout = () => emit('checkout');
+const checkout = () => emit('checkout', selectedItems.value);
 const openDetail = (item) => emit('select-merch', item.merch);
 </script>
 
@@ -113,8 +113,11 @@ const openDetail = (item) => emit('select-merch', item.merch);
             <img :src="item.merch.image" :alt="item.merch.title" class="cart-thumb" loading="lazy" />
             <div class="cart-info">
               <h3 class="cart-title">{{ item.merch.title }}</h3>
-              <span v-if="item.merch.variant" class="cart-variant">{{ item.merch.variant }}</span>
-              <span class="cart-price">{{ item.merch.price }}</span>
+              <span v-if="item.merch.variant" class="cart-variant">Varian: {{ item.merch.variant }}</span>
+              <div class="cart-price-row">
+                <span v-if="item.merch.originalPrice" class="cart-original-price">{{ item.merch.originalPrice }}</span>
+                <span class="cart-price" :class="{ 'price-discount': item.merch.originalPrice }">{{ item.merch.price }}</span>
+              </div>
               <div class="cart-bottom-row">
                 <div class="qty-control" @click.stop>
                   <button class="qty-btn" @click="dec(item)">−</button>
@@ -175,7 +178,10 @@ const openDetail = (item) => emit('select-merch', item.merch);
 .cart-info { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
 .cart-title { font-size: 12.5px; font-weight: 600; color: #0f172a; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
 .cart-variant { display: inline-block; align-self: flex-start; font-size: 10px; font-weight: 600; color: #475569; background: #f1f5f9; border-radius: 6px; padding: 2px 8px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.cart-price { font-size: 13px; font-weight: 700; color: #000; white-space: nowrap; margin-top: 4px; }
+.cart-price-row { display: flex; flex-direction: column; align-items: flex-start; gap: 0; margin-top: 4px; }
+.cart-original-price { font-size: 10px; color: #494a4a; text-decoration: line-through; text-decoration-color: #ef4444; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+.cart-price { font-size: 13px; font-weight: 700; color: #000; white-space: nowrap; }
+.cart-price.price-discount { color: #e52424; }
 .cart-bottom-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .qty-control { display: flex; align-items: center; gap: 10px; background: #f1f5f9; border-radius: 20px; padding: 2px 6px; flex-shrink: 0; }
 .qty-btn { width: 24px; height: 24px; border-radius: 50%; border: none; background: #fff; font-size: 14px; font-weight: 700; line-height: 1; color: #194e9e; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; padding: 0; }

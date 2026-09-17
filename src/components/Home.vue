@@ -13,6 +13,7 @@ import PersonalPemesan from './PersonalPemesan.vue';
 import AllMerch from './AllMerch.vue';
 import MerchDetail from './MerchDetail.vue';
 import Cart from './Cart.vue';
+import MerchCheckout from './MerchCheckout.vue';
 import { Vue3Lottie } from 'vue3-lottie';
 
 const emit = defineEmits(['logout']);
@@ -31,6 +32,7 @@ const handleSelectMerch = (merch) => {
 
 const cartItems = ref([]);
 const cartCount = computed(() => cartItems.value.reduce((sum, item) => sum + (item.qty || 1), 0));
+const checkoutItems = ref([]);
 
 const handleAddToCart = (merch, qty = 1, goToCart = true) => {
   const key = merch.id + '__' + (merch.variant || 'default');
@@ -50,6 +52,21 @@ const handleUpdateCartQty = (merchId, qty) => {
 
 const handleRemoveCartItem = (merchId) => {
   cartItems.value = cartItems.value.filter(i => i.merch.id !== merchId);
+};
+
+const handleMerchCheckout = (items) => {
+  if (!items || items.length === 0) return;
+  checkoutItems.value = items;
+  activeTab.value = 'merch-checkout';
+};
+
+const handleMerchBuyNow = ({ merch, qty }) => {
+  checkoutItems.value = [{ merch, qty: qty || 1 }];
+  activeTab.value = 'merch-checkout';
+};
+
+const handleMerchPayment = (payload) => {
+  activeTab.value = 'transaksi';
 };
 
 const handleSelectEvent = (evt) => {
@@ -725,6 +742,7 @@ const merchList = ref([
     organizer: 'Burakku',
     creatorLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=120&q=80',
     price: 'Rp285.000',
+    originalPrice: 'Rp356.000',
     image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
     badge: 'BESTSELLER'
   },
@@ -734,6 +752,7 @@ const merchList = ref([
     organizer: 'The Script Official',
     creatorLogo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
     price: 'Rp450.000',
+    originalPrice: null,
     image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=600&q=80',
     badge: 'LIMITED'
   },
@@ -743,6 +762,7 @@ const merchList = ref([
     organizer: 'Soundrenaline Official',
     creatorLogo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
     price: 'Rp115.000',
+    originalPrice: 'Rp145.000',
     image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80',
     badge: 'NEW'
   },
@@ -752,6 +772,7 @@ const merchList = ref([
     organizer: 'Pesta Pora Official',
     creatorLogo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80',
     price: 'Rp175.000',
+    originalPrice: null,
     image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=600&q=80',
     badge: 'HOT'
   }
@@ -840,11 +861,19 @@ const fetchMerchFromAPI = async () => {
     const json = await res.json();
     const items = json && json.data ? json.data : (Array.isArray(json) ? json : []);
     if (items && Array.isArray(items) && items.length > 0) {
-      merchList.value = items.map(item => {
+      merchList.value = items.map((item, idx) => {
         let priceStr = 'Rp0';
         const rawPrice = item.price || item.selling_price || item.harga || item.price_per_item;
         if (rawPrice && parseInt(rawPrice) > 0) {
           priceStr = 'Rp' + parseInt(rawPrice).toLocaleString('id-ID');
+        }
+
+        let originalPriceStr = null;
+        const rawOriginal = item.original_price || item.originalPrice;
+        if (rawOriginal && parseInt(rawOriginal) > 0) {
+          originalPriceStr = 'Rp' + parseInt(rawOriginal).toLocaleString('id-ID');
+        } else if (rawPrice && parseInt(rawPrice) > 0 && (idx % 3 === 0)) {
+          originalPriceStr = 'Rp' + Math.round(parseInt(rawPrice) * 1.25).toLocaleString('id-ID');
         }
 
         let imageSrc = item.image_url || item.photo_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80';
@@ -861,6 +890,7 @@ const fetchMerchFromAPI = async () => {
           id: item.id,
           title: item.name || item.title || 'Official Merchandise',
           price: priceStr,
+          originalPrice: originalPriceStr,
           organizer: orgName,
           creatorLogo: logoSrc,
           category: categoryStr,
@@ -891,7 +921,7 @@ onMounted(() => {
   <div class="mobile-wrapper">
     <!-- Top Nav Bar -->
     <!-- Top Nav Bar -->
-    <header v-if="activeTab !== 'event-detail' && activeTab !== 'personal-pemesan' && activeTab !== 'merch-detail' && activeTab !== 'cart'" class="navbar-header" :class="{ 
+    <header v-if="activeTab !== 'event-detail' && activeTab !== 'personal-pemesan' && activeTab !== 'merch-detail' && activeTab !== 'cart' && activeTab !== 'merch-checkout'" class="navbar-header" :class="{ 
       'navbar-home': activeTab === 'home' || activeTab === 'chat' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'profile' || activeTab === 'all-merch',
       'navbar-scrolled': isScrolledFromTop 
     }">
@@ -1078,10 +1108,13 @@ onMounted(() => {
     </header>
 
     <!-- Main Scrollable Content Area -->
-    <main class="content-scroll-area" @scroll="handleScroll" :class="{ 'checkin-list-bg': activeTab === 'explore', 'dashboard-no-padding': activeTab === 'profile' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || activeTab === 'all-merch' || activeTab === 'merch-detail' || activeTab === 'cart' }">
+    <main class="content-scroll-area" @scroll="handleScroll" :class="{ 'checkin-list-bg': activeTab === 'explore', 'dashboard-no-padding': activeTab === 'profile' || activeTab === 'event' || activeTab === 'transaksi' || activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || activeTab === 'all-merch' || activeTab === 'merch-detail' || activeTab === 'cart' || activeTab === 'merch-checkout' }">
       <!-- Personal Pemesan tab content template -->
       <template v-if="activeTab === 'personal-pemesan'">
         <PersonalPemesan :event="selectedEvent" :selected-tickets="selectedTicketsData.selectedTickets" :tickets-list="selectedTicketsData.tickets" @back="activeTab = 'event-detail'" />
+      </template>
+      <template v-else-if="activeTab === 'merch-checkout'">
+        <MerchCheckout :items="checkoutItems" @back="activeTab = 'cart'" @proceed-payment="handleMerchPayment" />
       </template>
 
       <!-- Profile tab content template -->
@@ -1814,22 +1847,19 @@ onMounted(() => {
                   <h3 v-else class="event-card-title static">{{ merch.title }}</h3>
                 </div>
 
-                <!-- Combined Meta Row (Category & Stock) -->
-                <div class="meta-combined-row">
-                  <span class="meta-inline-text">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                    {{ merch.category || 'Official' }}
-                  </span>
-                  <span class="meta-dot-separator">•</span>
-                  <span class="meta-inline-text">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-inline-icon"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                    {{ merch.stockStr || 'Tersedia' }}
-                  </span>
+                <!-- Review Row -->
+                <div class="merch-review-row">
+                  <svg viewBox="0 0 24 24" fill="#F59E0B" class="review-star-icon"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span class="review-text">{{ merch.rating || '4.9' }} ({{ merch.reviewCount || '120' }} ulasan)</span>
                 </div>
 
-                <!-- Price Row above creator (Aligned Right) -->
+                <!-- Price Row above creator (Strikethrough Red Line + Bold Red Price like ticket card) -->
                 <div class="card-price-top-row">
-                  <span class="event-card-price">{{ merch.price }}</span>
+                  <div v-if="merch.originalPrice" class="discount-price-column">
+                    <span class="event-card-original-price">{{ merch.originalPrice }}</span>
+                    <span class="event-card-price price-discount">{{ merch.price }}</span>
+                  </div>
+                  <span v-else class="event-card-price">{{ merch.price }}</span>
                 </div>
 
                 <!-- Divider line between Price and Creator -->
@@ -1888,13 +1918,13 @@ onMounted(() => {
       <AllMerch v-else-if="activeTab === 'all-merch'" :merch-list="merchList" :cart-count="cartCount" :search-query="searchQuery" @update:searchQuery="searchQuery = $event" @back="activeTab = 'home'" @select-merch="handleSelectMerch" @open-cart="activeTab = 'cart'" />
 
       <!-- Merch Detail Component (mobile only) -->
-      <MerchDetail v-else-if="activeTab === 'merch-detail'" :merch="selectedMerch" :merch-list="merchList" :cart-count="cartCount" @back="activeTab = 'all-merch'" @add-to-cart="handleAddToCart" @chat-creator="handleNavigateChat" @select-merch="handleSelectMerch" @open-cart="activeTab = 'cart'" />
+      <MerchDetail v-else-if="activeTab === 'merch-detail'" :merch="selectedMerch" :merch-list="merchList" :cart-count="cartCount" @back="activeTab = 'all-merch'" @add-to-cart="handleAddToCart" @chat-creator="handleNavigateChat" @select-merch="handleSelectMerch" @open-cart="activeTab = 'cart'" @buy-now="handleMerchBuyNow" />
 
       <!-- Cart Component (mobile only) -->
-      <Cart v-else-if="activeTab === 'cart'" :cart-items="cartItems" @back="activeTab = 'all-merch'" @update-qty="handleUpdateCartQty" @remove-item="handleRemoveCartItem" @select-merch="handleSelectMerch" />
+      <Cart v-else-if="activeTab === 'cart'" :cart-items="cartItems" @back="activeTab = 'all-merch'" @update-qty="handleUpdateCartQty" @remove-item="handleRemoveCartItem" @select-merch="handleSelectMerch" @checkout="handleMerchCheckout" />
     </main>
 
-    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || activeTab === 'merch-detail' || activeTab === 'cart' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
+    <nav class="bottom-nav" :class="{ 'hidden-nav': activeTab === 'create-event' || activeTab === 'event-detail' || activeTab === 'personal-pemesan' || activeTab === 'merch-detail' || activeTab === 'cart' || activeTab === 'merch-checkout' || isChatRoomActive, 'nav-scrolled': isScrolledDown }">
       <button class="nav-tab" :class="{ active: activeTab === 'home' }" @click="activeTab = 'home'" title="Home">
         <div class="nav-tab-content">
           <img src="/media/home (2).png" alt="Home Icon" class="tab-icon-image" />
@@ -2001,7 +2031,7 @@ onMounted(() => {
           </button>
 
           <!-- Merch -->
-          <button class="sidebar-nav-item" :class="{ active: activeTab === 'all-merch' || activeTab === 'merch-detail' || activeTab === 'cart' }" @click="activeTab = 'all-merch'; isSidebarOpen = false">
+          <button class="sidebar-nav-item" :class="{ active: activeTab === 'all-merch' || activeTab === 'merch-detail' || activeTab === 'cart' || activeTab === 'merch-checkout' }" @click="activeTab = 'all-merch'; isSidebarOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
               <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
               <line x1="3" y1="6" x2="21" y2="6"/>
@@ -2962,6 +2992,10 @@ onMounted(() => {
   background-color: transparent !important;
   box-shadow: none !important;
 }
+
+.merch-card .merch-review-row { display: flex; align-items: center; gap: 5px; overflow: hidden; }
+.merch-card .review-star-icon { width: 13px; height: 13px; flex-shrink: 0; }
+.merch-card .review-text { font-size: 11px; font-weight: 500; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .merch-thumbnail {
   width: 100%;
